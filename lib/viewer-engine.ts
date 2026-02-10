@@ -39,6 +39,11 @@ export class PanoramaViewer {
   private gyroEnabled = false;
   private deviceOrientationData: { alpha: number; beta: number; gamma: number } | null = null;
 
+  // Pinch zoom
+  private pinchStartDist = 0;
+  private pinchStartFov = 75;
+  private isPinching = false;
+
   // Animation
   private animationId: number | null = null;
   private clock = new THREE.Clock();
@@ -77,6 +82,7 @@ export class PanoramaViewer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.domElement.style.touchAction = 'none';
     container.appendChild(this.renderer.domElement);
 
     // Panorama sphere
@@ -111,14 +117,23 @@ export class PanoramaViewer {
     el.addEventListener('pointerup', this.onPointerUp);
     el.addEventListener('wheel', this.onWheel, { passive: false });
 
-    // Resize
+    // Touch events for pinch-to-zoom (pointer events don't easily track multi-touch distance)
+    el.addEventListener('touchstart', this.onTouchStart, { passive: false });
+    el.addEventListener('touchmove', this.onTouchMove, { passive: false });
+    el.addEventListener('touchend', this.onTouchEnd, { passive: false });
+
+    // Resize — listen to both window and visualViewport (mobile address bar changes)
     window.addEventListener('resize', this.onResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onResize);
+    }
 
     // Device orientation
     window.addEventListener('deviceorientation', this.onDeviceOrientation);
   }
 
   private onPointerDown = (e: PointerEvent) => {
+    if (this.isPinching) return;
     this.isUserInteracting = true;
     this.onPointerDownX = e.clientX;
     this.onPointerDownY = e.clientY;
@@ -128,6 +143,8 @@ export class PanoramaViewer {
   };
 
   private onPointerMove = (e: PointerEvent) => {
+    if (this.isPinching) return;
+
     // Update mouse position for raycasting
     const rect = this.container.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -161,6 +178,36 @@ export class PanoramaViewer {
   private onWheel = (e: WheelEvent) => {
     e.preventDefault();
     this.targetFov = Math.max(30, Math.min(100, this.targetFov + e.deltaY * 0.05));
+  };
+
+  private getTouchDistance(touches: TouchList): number {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  private onTouchStart = (e: TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      this.isPinching = true;
+      this.pinchStartDist = this.getTouchDistance(e.touches);
+      this.pinchStartFov = this.targetFov;
+    }
+  };
+
+  private onTouchMove = (e: TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 2 && this.isPinching) {
+      const dist = this.getTouchDistance(e.touches);
+      const scale = this.pinchStartDist / dist;
+      this.targetFov = Math.max(30, Math.min(100, this.pinchStartFov * scale));
+    }
+  };
+
+  private onTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) {
+      this.isPinching = false;
+    }
   };
 
   private onResize = () => {
@@ -513,7 +560,13 @@ export class PanoramaViewer {
     el.removeEventListener('pointermove', this.onPointerMove);
     el.removeEventListener('pointerup', this.onPointerUp);
     el.removeEventListener('wheel', this.onWheel);
+    el.removeEventListener('touchstart', this.onTouchStart);
+    el.removeEventListener('touchmove', this.onTouchMove);
+    el.removeEventListener('touchend', this.onTouchEnd);
     window.removeEventListener('resize', this.onResize);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onResize);
+    }
     window.removeEventListener('deviceorientation', this.onDeviceOrientation);
 
     this.clearHotspots();
