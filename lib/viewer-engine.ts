@@ -33,7 +33,7 @@ export class PanoramaViewer {
   private targetFov = 75;
   private autoRotate = false;
   private autoRotateSpeed = 0.15;
-  private damping = 0.08;
+  private damping = 0.15;
 
   // Gyroscope
   private gyroEnabled = false;
@@ -134,7 +134,10 @@ export class PanoramaViewer {
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     if (this.isUserInteracting) {
-      const sensitivity = this.fov / 600;
+      // Touch needs higher sensitivity since drag distances are shorter on small screens
+      const isTouch = e.pointerType === 'touch';
+      const divisor = isTouch ? 250 : 500;
+      const sensitivity = this.fov / divisor;
       this.targetLon = (this.onPointerDownX - e.clientX) * sensitivity + this.onPointerDownLon;
       this.targetLat = (e.clientY - this.onPointerDownY) * sensitivity + this.onPointerDownLat;
     }

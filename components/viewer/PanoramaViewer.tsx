@@ -182,14 +182,10 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
         visible={showUI}
       />
 
-      {/* Viewer controls */}
+      {/* Fullscreen button only */}
       <ViewerControls
         isFullscreen={isFullscreen}
-        isGyroEnabled={isGyroEnabled}
-        isAutoRotating={isAutoRotating}
         onToggleFullscreen={toggleFullscreen}
-        onToggleGyro={toggleGyro}
-        onToggleAutoRotate={toggleAutoRotate}
         visible={showUI}
       />
 
