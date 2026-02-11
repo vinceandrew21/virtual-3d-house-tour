@@ -15,22 +15,22 @@
         {
           "id": "lr-to-kitchen",
           "type": "navigation",
-          "position": { "yaw": -120, "pitch": -5 },
-          "tooltip": "Go to Kitchen",
+          "position": { "yaw": -120, "pitch": -30 },
+          "tooltip": "Walk to Kitchen",
           "targetScene": "kitchen"
         },
         {
           "id": "lr-to-bedroom",
           "type": "navigation",
-          "position": { "yaw": 140, "pitch": -5 },
-          "tooltip": "Go to Bedroom",
+          "position": { "yaw": 140, "pitch": -28 },
+          "tooltip": "Walk to Bedroom",
           "targetScene": "bedroom"
         },
         {
           "id": "lr-to-patio",
           "type": "navigation",
-          "position": { "yaw": 30, "pitch": -8 },
-          "tooltip": "Go to Garden",
+          "position": { "yaw": 30, "pitch": -32 },
+          "tooltip": "Walk to Garden",
           "targetScene": "patio"
         },
         {
@@ -70,9 +70,16 @@
         {
           "id": "k-to-living",
           "type": "navigation",
-          "position": { "yaw": -130, "pitch": -2 },
-          "tooltip": "Back to Living Room",
+          "position": { "yaw": -130, "pitch": -28 },
+          "tooltip": "Walk to Living Room",
           "targetScene": "living-room"
+        },
+        {
+          "id": "k-to-bedroom",
+          "type": "navigation",
+          "position": { "yaw": 170, "pitch": -25 },
+          "tooltip": "Walk to Bedroom",
+          "targetScene": "bedroom"
         },
         {
           "id": "k-fridge",
@@ -101,8 +108,8 @@
         {
           "id": "k-to-patio",
           "type": "navigation",
-          "position": { "yaw": -20, "pitch": -5 },
-          "tooltip": "Go to Garden",
+          "position": { "yaw": -20, "pitch": -30 },
+          "tooltip": "Walk to Garden",
           "targetScene": "patio"
         }
       ]
@@ -117,8 +124,8 @@
         {
           "id": "b-to-living",
           "type": "navigation",
-          "position": { "yaw": -140, "pitch": -3 },
-          "tooltip": "Back to Living Room",
+          "position": { "yaw": -140, "pitch": -28 },
+          "tooltip": "Walk to Living Room",
           "targetScene": "living-room"
         },
         {
@@ -157,9 +164,16 @@
         {
           "id": "b-to-kitchen",
           "type": "navigation",
-          "position": { "yaw": 155, "pitch": -3 },
-          "tooltip": "Go to Kitchen",
+          "position": { "yaw": 155, "pitch": -25 },
+          "tooltip": "Walk to Kitchen",
           "targetScene": "kitchen"
+        },
+        {
+          "id": "b-to-patio",
+          "type": "navigation",
+          "position": { "yaw": -60, "pitch": -30 },
+          "tooltip": "Walk to Garden",
+          "targetScene": "patio"
         }
       ]
     },
@@ -173,8 +187,8 @@
         {
           "id": "p-to-living",
           "type": "navigation",
-          "position": { "yaw": -160, "pitch": -10 },
-          "tooltip": "Back to Living Room",
+          "position": { "yaw": -160, "pitch": -30 },
+          "tooltip": "Walk to Living Room",
           "targetScene": "living-room"
         },
         {
@@ -213,9 +227,16 @@
         {
           "id": "p-to-kitchen",
           "type": "navigation",
-          "position": { "yaw": 140, "pitch": -8 },
-          "tooltip": "Go to Kitchen",
+          "position": { "yaw": 140, "pitch": -28 },
+          "tooltip": "Walk to Kitchen",
           "targetScene": "kitchen"
+        },
+        {
+          "id": "p-to-bedroom",
+          "type": "navigation",
+          "position": { "yaw": 80, "pitch": -32 },
+          "tooltip": "Walk to Bedroom",
+          "targetScene": "bedroom"
         }
       ]
     }

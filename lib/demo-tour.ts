@@ -14,28 +14,28 @@ export const demoTour: TourConfig = {
       imageUrl: '/tours/demo/living-room.jpg',
       initialView: { yaw: 0, pitch: 0, fov: 75 },
       hotspots: [
-        // Navigation: doorway/arch area to kitchen (left side, near the arch)
+        // Floor navigation: archway to kitchen
         {
           id: 'lr-to-kitchen',
           type: 'navigation',
-          position: { yaw: -120, pitch: -5 },
-          tooltip: 'Go to Kitchen',
+          position: { yaw: -120, pitch: -30 },
+          tooltip: 'Walk to Kitchen',
           targetScene: 'kitchen',
         },
-        // Navigation: toward the right hallway area to bedroom
+        // Floor navigation: hallway to bedroom
         {
           id: 'lr-to-bedroom',
           type: 'navigation',
-          position: { yaw: 140, pitch: -5 },
-          tooltip: 'Go to Bedroom',
+          position: { yaw: 140, pitch: -28 },
+          tooltip: 'Walk to Bedroom',
           targetScene: 'bedroom',
         },
-        // Navigation: glass doors at center-right lead to patio
+        // Floor navigation: glass doors to garden
         {
           id: 'lr-to-patio',
           type: 'navigation',
-          position: { yaw: 30, pitch: -8 },
-          tooltip: 'Go to Garden',
+          position: { yaw: 30, pitch: -32 },
+          tooltip: 'Walk to Garden',
           targetScene: 'patio',
         },
         // Info: the cream sofas in the center area
@@ -75,13 +75,21 @@ export const demoTour: TourConfig = {
       imageUrl: '/tours/demo/kitchen.jpg',
       initialView: { yaw: 0, pitch: 0, fov: 75 },
       hotspots: [
-        // Navigation: archway on the left leads back to living room
+        // Floor navigation: archway back to living room
         {
           id: 'k-to-living',
           type: 'navigation',
-          position: { yaw: -130, pitch: -2 },
-          tooltip: 'Back to Living Room',
+          position: { yaw: -130, pitch: -28 },
+          tooltip: 'Walk to Living Room',
           targetScene: 'living-room',
+        },
+        // Floor navigation: toward bedroom through hallway
+        {
+          id: 'k-to-bedroom',
+          type: 'navigation',
+          position: { yaw: 170, pitch: -25 },
+          tooltip: 'Walk to Bedroom',
+          targetScene: 'bedroom',
         },
         // Info: refrigerator and kitchen area on the right
         {
@@ -110,12 +118,12 @@ export const demoTour: TourConfig = {
           title: 'Traditional Thatch Roof',
           content: 'The beautifully crafted thatched ceiling brings a warm, rustic character to the space. This traditional technique provides natural insulation and adds organic texture overhead.',
         },
-        // Navigation: glass door at center leads to patio
+        // Floor navigation: glass door to garden
         {
           id: 'k-to-patio',
           type: 'navigation',
-          position: { yaw: -20, pitch: -5 },
-          tooltip: 'Go to Garden',
+          position: { yaw: -20, pitch: -30 },
+          tooltip: 'Walk to Garden',
           targetScene: 'patio',
         },
       ],
@@ -127,12 +135,12 @@ export const demoTour: TourConfig = {
       imageUrl: '/tours/demo/bedroom.jpg',
       initialView: { yaw: 0, pitch: 0, fov: 75 },
       hotspots: [
-        // Navigation: door on far left leads back to living room
+        // Floor navigation: door back to living room
         {
           id: 'b-to-living',
           type: 'navigation',
-          position: { yaw: -140, pitch: -3 },
-          tooltip: 'Back to Living Room',
+          position: { yaw: -140, pitch: -28 },
+          tooltip: 'Walk to Living Room',
           targetScene: 'living-room',
         },
         // Info: the king bed on the right side
@@ -172,13 +180,21 @@ export const demoTour: TourConfig = {
           title: 'Designer Accent Chair',
           content: 'A striking chartreuse upholstered armchair provides a bold pop of color. Positioned by the window, it creates a cozy reading corner within the suite.',
         },
-        // Navigation: bathroom door on the right
+        // Floor navigation: door to kitchen
         {
           id: 'b-to-kitchen',
           type: 'navigation',
-          position: { yaw: 155, pitch: -3 },
-          tooltip: 'Go to Kitchen',
+          position: { yaw: 155, pitch: -25 },
+          tooltip: 'Walk to Kitchen',
           targetScene: 'kitchen',
+        },
+        // Floor navigation: toward garden through side door
+        {
+          id: 'b-to-patio',
+          type: 'navigation',
+          position: { yaw: -60, pitch: -30 },
+          tooltip: 'Walk to Garden',
+          targetScene: 'patio',
         },
       ],
     },
@@ -189,12 +205,12 @@ export const demoTour: TourConfig = {
       imageUrl: '/tours/demo/patio.jpg',
       initialView: { yaw: 0, pitch: 0, fov: 80 },
       hotspots: [
-        // Navigation: stone path behind leads back to living room
+        // Floor navigation: stone path back to living room
         {
           id: 'p-to-living',
           type: 'navigation',
-          position: { yaw: -160, pitch: -10 },
-          tooltip: 'Back to Living Room',
+          position: { yaw: -160, pitch: -30 },
+          tooltip: 'Walk to Living Room',
           targetScene: 'living-room',
         },
         // Info: the koi pond at center
@@ -234,13 +250,21 @@ export const demoTour: TourConfig = {
           imageUrl: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&q=80',
           imageAlt: 'Traditional cobblestone pathway through a Chinese garden',
         },
-        // Navigation: path toward kitchen
+        // Floor navigation: path toward kitchen
         {
           id: 'p-to-kitchen',
           type: 'navigation',
-          position: { yaw: 140, pitch: -8 },
-          tooltip: 'Go to Kitchen',
+          position: { yaw: 140, pitch: -28 },
+          tooltip: 'Walk to Kitchen',
           targetScene: 'kitchen',
+        },
+        // Floor navigation: path toward bedroom
+        {
+          id: 'p-to-bedroom',
+          type: 'navigation',
+          position: { yaw: 80, pitch: -32 },
+          tooltip: 'Walk to Bedroom',
+          targetScene: 'bedroom',
         },
       ],
     },

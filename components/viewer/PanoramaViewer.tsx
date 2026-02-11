@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { PanoramaViewer as ViewerEngine } from '@/lib/viewer-engine';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Scene, Hotspot, TourConfig } from '@/types/tour';
 import HotspotModal from '@/components/hotspots/HotspotModal';
 import HotspotTooltip from '@/components/hotspots/HotspotTooltip';
@@ -23,6 +24,8 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isGyroEnabled, setIsGyroEnabled] = useState(false);
   const [isAutoRotating, setIsAutoRotating] = useState(false);
+  const [vrSupported, setVrSupported] = useState(false);
+  const [isVR, setIsVR] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showUI, setShowUI] = useState(true);
@@ -45,6 +48,9 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
     });
 
     viewer.setAutoRotate(false);
+
+    // Check WebXR VR support
+    ViewerEngine.isVRSupported().then(supported => setVrSupported(supported));
 
     // Load default scene
     const defaultScene = tour.scenes.find(s => s.id === tour.defaultScene) || tour.scenes[0];
@@ -125,6 +131,17 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
     viewerRef.current?.setAutoRotate(newState);
   }, [isAutoRotating]);
 
+  const toggleVR = useCallback(async () => {
+    if (!viewerRef.current) return;
+    if (isVR) {
+      viewerRef.current.exitVR();
+      setIsVR(false);
+    } else {
+      const entered = await viewerRef.current.enterVR();
+      setIsVR(entered);
+    }
+  }, [isVR]);
+
   // Track mouse position for tooltip
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -182,10 +199,13 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
         visible={showUI}
       />
 
-      {/* Fullscreen button only */}
+      {/* Viewer controls */}
       <ViewerControls
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
+        vrSupported={vrSupported}
+        isVR={isVR}
+        onToggleVR={toggleVR}
         visible={showUI}
       />
 
