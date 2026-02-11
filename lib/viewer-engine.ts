@@ -313,7 +313,7 @@ export class PanoramaViewer {
 
       // Gyroscope
       if (this.gyroEnabled && this.deviceOrientationData && !this.isUserInteracting) {
-        const { alpha, beta, gamma } = this.deviceOrientationData;
+        const { alpha, beta } = this.deviceOrientationData;
 
         // Capture baseline yaw on first reading so the view doesn't jump
         if (!this.gyroHasOffset) {
@@ -321,17 +321,10 @@ export class PanoramaViewer {
           this.gyroHasOffset = true;
         }
 
-        if (this.isCardboard) {
-          // Landscape mode (phone on its side in a cardboard headset):
-          // alpha = compass heading → yaw, gamma → pitch (inverted)
-          this.targetLon = alpha - this.gyroAlphaOffset;
-          this.targetLat = -(gamma + 90);
-        } else {
-          // Portrait mode (normal phone gyro):
-          // alpha = compass heading → yaw, beta → pitch
-          this.targetLon = alpha - this.gyroAlphaOffset;
-          this.targetLat = 90 - beta;
-        }
+        // alpha = compass heading → yaw (works in both portrait and landscape)
+        // beta = forward/back tilt → pitch (same axis regardless of device rotation)
+        this.targetLon = alpha - this.gyroAlphaOffset;
+        this.targetLat = 90 - beta;
       }
 
       // Dolly animation (Matterport-style fly-to)

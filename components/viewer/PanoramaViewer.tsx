@@ -219,6 +219,17 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
         visible={showUI}
       />
 
+      {/* Exit VR button — always visible in VR/cardboard mode */}
+      {isVR && (
+        <button
+          className="exit-vr-btn"
+          onClick={toggleVR}
+          aria-label="Exit VR mode"
+        >
+          Exit VR
+        </button>
+      )}
+
       {/* Hotspot tooltip */}
       {hoveredHotspot && (
         <HotspotTooltip
