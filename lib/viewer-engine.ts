@@ -38,6 +38,8 @@ export class PanoramaViewer {
   // Gyroscope
   private gyroEnabled = false;
   private deviceOrientationData: { alpha: number; beta: number; gamma: number } | null = null;
+  private gyroAlphaOffset = 0; // baseline yaw when gyro was enabled
+  private gyroHasOffset = false;
 
   // Pinch zoom
   private pinchStartDist = 0;
@@ -311,9 +313,25 @@ export class PanoramaViewer {
 
       // Gyroscope
       if (this.gyroEnabled && this.deviceOrientationData && !this.isUserInteracting) {
-        const { beta, gamma } = this.deviceOrientationData;
-        this.targetLat = 90 - beta;
-        this.targetLon += gamma * 0.1;
+        const { alpha, beta, gamma } = this.deviceOrientationData;
+
+        // Capture baseline yaw on first reading so the view doesn't jump
+        if (!this.gyroHasOffset) {
+          this.gyroAlphaOffset = alpha - this.lon;
+          this.gyroHasOffset = true;
+        }
+
+        if (this.isCardboard) {
+          // Landscape mode (phone on its side in a cardboard headset):
+          // alpha = compass heading → yaw, gamma → pitch (inverted)
+          this.targetLon = alpha - this.gyroAlphaOffset;
+          this.targetLat = -(gamma + 90);
+        } else {
+          // Portrait mode (normal phone gyro):
+          // alpha = compass heading → yaw, beta → pitch
+          this.targetLon = alpha - this.gyroAlphaOffset;
+          this.targetLat = 90 - beta;
+        }
       }
 
       // Dolly animation (Matterport-style fly-to)
@@ -615,6 +633,9 @@ export class PanoramaViewer {
   enterCardboardMode() {
     this.isCardboard = true;
     this.stereoCamera.eyeSep = 0.064; // 64mm interpupillary distance
+
+    // Reset gyro offset so landscape orientation recalibrates from current heading
+    this.gyroHasOffset = false;
     this.setGyroEnabled(true);
 
     // Fullscreen + landscape lock for phone-in-headset
@@ -912,6 +933,8 @@ export class PanoramaViewer {
 
   setGyroEnabled(enabled: boolean) {
     this.gyroEnabled = enabled;
+    // Reset offset so next reading recalibrates from current view direction
+    this.gyroHasOffset = false;
     if (enabled && typeof DeviceOrientationEvent !== 'undefined') {
       // Request permission on iOS 13+
       const doe = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
