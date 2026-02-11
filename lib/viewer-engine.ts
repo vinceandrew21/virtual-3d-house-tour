@@ -188,10 +188,15 @@ export class PanoramaViewer {
     this.isUserInteracting = false;
     this.renderer.domElement.style.cursor = 'grab';
 
-    // Check if it was a click (not a drag)
+    // Check if it was a click/tap (not a drag)
     const dx = Math.abs(e.clientX - this.onPointerDownX);
     const dy = Math.abs(e.clientY - this.onPointerDownY);
-    if (dx < 5 && dy < 5) {
+    if (dx < 10 && dy < 10) {
+      // Update mouse position from the tap/click location — on mobile,
+      // pointermove may never fire so this.mouse would be stale
+      const rect = this.container.getBoundingClientRect();
+      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       this.checkHotspotIntersection(true);
     }
   };
