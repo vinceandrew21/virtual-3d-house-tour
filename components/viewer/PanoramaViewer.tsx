@@ -24,7 +24,7 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isGyroEnabled, setIsGyroEnabled] = useState(false);
   const [isAutoRotating, setIsAutoRotating] = useState(false);
-  const [vrSupported, setVrSupported] = useState(false);
+  const [vrSupported, setVrSupported] = useState(false); // WebXR available
   const [isVR, setIsVR] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -134,13 +134,24 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const toggleVR = useCallback(async () => {
     if (!viewerRef.current) return;
     if (isVR) {
-      viewerRef.current.exitVR();
+      // Exit whichever mode is active
+      if (viewerRef.current.getIsCardboard()) {
+        viewerRef.current.exitCardboardMode();
+      } else {
+        viewerRef.current.exitVR();
+      }
       setIsVR(false);
     } else {
-      const entered = await viewerRef.current.enterVR();
-      setIsVR(entered);
+      // Try WebXR first, fall back to cardboard stereo
+      if (vrSupported) {
+        const entered = await viewerRef.current.enterVR();
+        setIsVR(entered);
+      } else {
+        viewerRef.current.enterCardboardMode();
+        setIsVR(true);
+      }
     }
-  }, [isVR]);
+  }, [isVR, vrSupported]);
 
   // Track mouse position for tooltip
   useEffect(() => {
@@ -203,7 +214,6 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
       <ViewerControls
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
-        vrSupported={vrSupported}
         isVR={isVR}
         onToggleVR={toggleVR}
         visible={showUI}

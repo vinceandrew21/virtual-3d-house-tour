@@ -63,6 +63,10 @@ export class PanoramaViewer {
   private gazeDuration = 1.5;
   private reticleRing: THREE.Mesh | null = null;
 
+  // Cardboard stereo mode (fallback when WebXR unavailable)
+  private isCardboard = false;
+  private stereoCamera = new THREE.StereoCamera();
+
   // Animation
   private animationId: number | null = null;
   private clock = new THREE.Clock();
@@ -405,7 +409,27 @@ export class PanoramaViewer {
       this.onViewChange(this.lon, this.lat, this.fov);
     }
 
-    this.renderer.render(this.scene, this.camera);
+    // Render — stereo split for cardboard, normal otherwise
+    if (this.isCardboard) {
+      const size = this.renderer.getSize(new THREE.Vector2());
+      this.stereoCamera.update(this.camera);
+
+      this.renderer.setScissorTest(true);
+
+      // Left eye
+      this.renderer.setScissor(0, 0, size.x / 2, size.y);
+      this.renderer.setViewport(0, 0, size.x / 2, size.y);
+      this.renderer.render(this.scene, this.stereoCamera.cameraL);
+
+      // Right eye
+      this.renderer.setScissor(size.x / 2, 0, size.x / 2, size.y);
+      this.renderer.setViewport(size.x / 2, 0, size.x / 2, size.y);
+      this.renderer.render(this.scene, this.stereoCamera.cameraR);
+
+      this.renderer.setScissorTest(false);
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   };
 
   // --- VR Methods ---
@@ -583,7 +607,47 @@ export class PanoramaViewer {
   }
 
   getIsVR() {
-    return this.isVR;
+    return this.isVR || this.isCardboard;
+  }
+
+  // --- Cardboard Stereo Mode (no WebXR needed) ---
+
+  enterCardboardMode() {
+    this.isCardboard = true;
+    this.stereoCamera.eyeSep = 0.064; // 64mm interpupillary distance
+    this.setGyroEnabled(true);
+
+    // Fullscreen + landscape lock for phone-in-headset
+    this.container.requestFullscreen?.().catch(() => {});
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (screen.orientation as any)?.lock?.('landscape').catch(() => {});
+    } catch {
+      // orientation lock not supported
+    }
+  }
+
+  exitCardboardMode() {
+    this.isCardboard = false;
+    this.setGyroEnabled(false);
+
+    // Reset viewport to full canvas
+    this.renderer.setScissorTest(false);
+    this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (screen.orientation as any)?.unlock?.();
+    } catch {
+      // orientation unlock not supported
+    }
+  }
+
+  getIsCardboard() {
+    return this.isCardboard;
   }
 
   // Public API
@@ -883,6 +947,7 @@ export class PanoramaViewer {
 
   dispose() {
     this.renderer.setAnimationLoop(null);
+    if (this.isCardboard) this.exitCardboardMode();
     this.exitVR();
     this.removeReticle();
 
