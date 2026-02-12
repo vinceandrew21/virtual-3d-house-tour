@@ -31,7 +31,6 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showUI, setShowUI] = useState(true);
-  const [showInstructions, setShowInstructions] = useState(false);
   const hideUITimeout = useRef<NodeJS.Timeout | null>(null);
 
   const setupCallbacks = useCallback((viewer: AnyViewer) => {
@@ -113,12 +112,7 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
         });
     }
 
-    setTimeout(() => {
-      setIsLoading(false);
-      if (targetMode === 'walkable') {
-        setShowInstructions(true);
-      }
-    }, 500);
+    setTimeout(() => setIsLoading(false), 500);
   }, [tour.scenes, createEngine, setupCallbacks]);
 
   const handleHotspotClick = useCallback((hotspot: Hotspot) => {
@@ -216,46 +210,6 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
     >
       {/* Loading overlay */}
       <LoadingOverlay isLoading={isLoading} sceneName={currentScene?.name} />
-
-      {/* Walkable room instructions */}
-      {showInstructions && (
-        <div
-          className="walkable-instructions-overlay"
-          onClick={() => setShowInstructions(false)}
-          onTouchStart={() => setShowInstructions(false)}
-        >
-          <div className="walkable-instructions-card">
-            <h3 className="walkable-instructions-title">How to Navigate</h3>
-            <div className="walkable-instructions-list">
-              <div className="walkable-instructions-item">
-                <span className="walkable-instructions-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 9l4-4 4 4"/><path d="M9 5v14"/><path d="M19 15l-4 4-4-4"/><path d="M15 19V5"/></svg>
-                </span>
-                <span>Click &amp; drag to look around</span>
-              </div>
-              <div className="walkable-instructions-item">
-                <span className="walkable-instructions-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m10-10h-4M6 12H2"/></svg>
-                </span>
-                <span>Tap floor markers to move</span>
-              </div>
-              <div className="walkable-instructions-item">
-                <span className="walkable-instructions-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                </span>
-                <span>Scroll or pinch to zoom</span>
-              </div>
-              <div className="walkable-instructions-item">
-                <span className="walkable-instructions-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l0 4m0 12l0 4m-6-14l-4 0m16 0l4 0"/><rect x="8" y="8" width="8" height="8" rx="1"/><text x="9.5" y="14" fontSize="6" fill="currentColor" stroke="none" fontFamily="monospace">W</text></svg>
-                </span>
-                <span>WASD keys to walk (optional)</span>
-              </div>
-            </div>
-            <p className="walkable-instructions-dismiss">Tap anywhere to start</p>
-          </div>
-        </div>
-      )}
 
       {/* Tour header */}
       <TourHeader
