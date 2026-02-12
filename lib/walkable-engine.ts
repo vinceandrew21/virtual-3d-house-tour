@@ -64,6 +64,13 @@ export class WalkableViewer {
   private prevTouchY = 0;
   private touchSensitivity = 0.004;
 
+  // Zoom (FOV)
+  private fov = 70;
+  private minFov = 30;
+  private maxFov = 90;
+  private pinchStartDist = 0;
+  private pinchStartFov = 70;
+
   // Pending click (processed in animation loop for reliable raycasting)
   private pendingClick = false;
   private clickCoords = new THREE.Vector2();
@@ -143,6 +150,9 @@ export class WalkableViewer {
     document.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('resize', this.handleResize);
 
+    // Scroll wheel zoom
+    el.addEventListener('wheel', this.handleWheel, { passive: false });
+
     // Touch events
     el.addEventListener('touchstart', this.handleTouchStart, { passive: false });
     el.addEventListener('touchmove', this.handleTouchMove, { passive: false });
@@ -207,6 +217,14 @@ export class WalkableViewer {
     this.renderer.domElement.style.cursor = 'grab';
   };
 
+  private handleWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    this.fov += e.deltaY * 0.05;
+    this.fov = Math.max(this.minFov, Math.min(this.maxFov, this.fov));
+    this.camera.fov = this.fov;
+    this.camera.updateProjectionMatrix();
+  };
+
   private handleKeyDown = (e: KeyboardEvent) => {
     switch (e.code) {
       case 'KeyW': case 'ArrowUp':    this.moveForward = true; break;
@@ -234,6 +252,12 @@ export class WalkableViewer {
       this.prevTouchX = t.clientX;
       this.prevTouchY = t.clientY;
       this.touchStartTime = performance.now();
+    } else if (e.touches.length === 2) {
+      // Pinch-to-zoom start
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      this.pinchStartDist = Math.hypot(dx, dy);
+      this.pinchStartFov = this.fov;
     }
   };
 
@@ -257,6 +281,15 @@ export class WalkableViewer {
 
       this.prevTouchX = t.clientX;
       this.prevTouchY = t.clientY;
+    } else if (e.touches.length === 2 && this.pinchStartDist > 0) {
+      // Pinch-to-zoom
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const scale = this.pinchStartDist / dist;
+      this.fov = Math.max(this.minFov, Math.min(this.maxFov, this.pinchStartFov * scale));
+      this.camera.fov = this.fov;
+      this.camera.updateProjectionMatrix();
     }
   };
 
@@ -757,6 +790,7 @@ export class WalkableViewer {
     el.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('mouseup', this.handleMouseUp);
     el.removeEventListener('mouseleave', this.handleMouseLeave);
+    el.removeEventListener('wheel', this.handleWheel);
     el.removeEventListener('touchstart', this.handleTouchStart);
     el.removeEventListener('touchmove', this.handleTouchMove);
     el.removeEventListener('touchend', this.handleTouchEnd);
