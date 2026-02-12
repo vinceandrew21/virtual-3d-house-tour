@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { PanoramaViewer as ViewerEngine } from '@/lib/viewer-engine';
+import { WalkableViewer } from '@/lib/walkable-engine';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Scene, Hotspot, TourConfig } from '@/types/tour';
+import { Scene, Hotspot, TourConfig, SceneMode } from '@/types/tour';
 import HotspotModal from '@/components/hotspots/HotspotModal';
 import HotspotTooltip from '@/components/hotspots/HotspotTooltip';
 import SceneSelector from '@/components/navigation/SceneSelector';
@@ -15,45 +16,61 @@ interface PanoramaViewerProps {
   tour: TourConfig;
 }
 
+type AnyViewer = ViewerEngine | WalkableViewer;
+
 export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<ViewerEngine | null>(null);
+  const viewerRef = useRef<AnyViewer | null>(null);
+  const currentModeRef = useRef<SceneMode>('panorama');
   const [currentScene, setCurrentScene] = useState<Scene | null>(null);
   const [hoveredHotspot, setHoveredHotspot] = useState<Hotspot | null>(null);
   const [activeHotspot, setActiveHotspot] = useState<Hotspot | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isGyroEnabled, setIsGyroEnabled] = useState(false);
   const [isAutoRotating, setIsAutoRotating] = useState(false);
-  const [vrSupported, setVrSupported] = useState(false); // WebXR available
-  const [isVR, setIsVR] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showUI, setShowUI] = useState(true);
   const hideUITimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize viewer
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const viewer = new ViewerEngine(containerRef.current);
-    viewerRef.current = viewer;
-
-    viewer.setCallbacks({
+  const setupCallbacks = useCallback((viewer: AnyViewer) => {
+    const callbacks: Parameters<AnyViewer['setCallbacks']>[0] = {
       onHotspotHover: (hotspot) => {
         setHoveredHotspot(hotspot);
       },
       onHotspotClick: (hotspot) => {
         handleHotspotClick(hotspot);
       },
-    });
+    };
 
-    viewer.setAutoRotate(false);
+    viewer.setCallbacks(callbacks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Check WebXR VR support
-    ViewerEngine.isVRSupported().then(supported => setVrSupported(supported));
+  const createEngine = useCallback((mode: SceneMode): AnyViewer => {
+    if (!containerRef.current) throw new Error('No container');
 
-    // Load default scene
+    if (mode === 'walkable') {
+      return new WalkableViewer(containerRef.current);
+    } else {
+      const engine = new ViewerEngine(containerRef.current);
+      engine.setAutoRotate(false);
+      return engine;
+    }
+  }, []);
+
+  // Initialize viewer
+  useEffect(() => {
+    if (!containerRef.current) return;
+
     const defaultScene = tour.scenes.find(s => s.id === tour.defaultScene) || tour.scenes[0];
+    const mode = defaultScene.mode || 'panorama';
+
+    const viewer = createEngine(mode);
+    viewerRef.current = viewer;
+    currentModeRef.current = mode;
+    setupCallbacks(viewer);
+
     loadScene(defaultScene, false);
 
     return () => {
@@ -63,7 +80,18 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   }, []);
 
   const loadScene = useCallback(async (scene: Scene, transition: boolean = true) => {
-    if (!viewerRef.current) return;
+    if (!containerRef.current) return;
+
+    const targetMode: SceneMode = scene.mode || 'panorama';
+
+    // If mode changed, swap engines
+    if (targetMode !== currentModeRef.current || !viewerRef.current) {
+      viewerRef.current?.dispose();
+      const newViewer = createEngine(targetMode);
+      viewerRef.current = newViewer;
+      currentModeRef.current = targetMode;
+      setupCallbacks(newViewer);
+    }
 
     setIsLoading(true);
     setCurrentScene(scene);
@@ -72,18 +100,20 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
 
     await viewerRef.current.loadScene(scene, transition);
 
-    // Preload adjacent scenes
-    scene.hotspots
-      .filter(h => h.type === 'navigation' && h.targetScene)
-      .forEach(h => {
-        const targetScene = tour.scenes.find(s => s.id === h.targetScene);
-        if (targetScene) {
-          viewerRef.current?.preloadTexture(targetScene.imageUrl);
-        }
-      });
+    // Preload adjacent panorama scenes
+    if (targetMode === 'panorama' && viewerRef.current instanceof ViewerEngine) {
+      scene.hotspots
+        .filter(h => h.type === 'navigation' && h.targetScene)
+        .forEach(h => {
+          const targetScene = tour.scenes.find(s => s.id === h.targetScene);
+          if (targetScene && (!targetScene.mode || targetScene.mode === 'panorama')) {
+            (viewerRef.current as ViewerEngine)?.preloadTexture(targetScene.imageUrl);
+          }
+        });
+    }
 
     setTimeout(() => setIsLoading(false), 500);
-  }, [tour.scenes]);
+  }, [tour.scenes, createEngine, setupCallbacks]);
 
   const handleHotspotClick = useCallback((hotspot: Hotspot) => {
     switch (hotspot.type) {
@@ -122,36 +152,18 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const toggleGyro = useCallback(() => {
     const newState = !isGyroEnabled;
     setIsGyroEnabled(newState);
-    viewerRef.current?.setGyroEnabled(newState);
+    if (viewerRef.current instanceof ViewerEngine) {
+      viewerRef.current.setGyroEnabled(newState);
+    }
   }, [isGyroEnabled]);
 
   const toggleAutoRotate = useCallback(() => {
     const newState = !isAutoRotating;
     setIsAutoRotating(newState);
-    viewerRef.current?.setAutoRotate(newState);
-  }, [isAutoRotating]);
-
-  const toggleVR = useCallback(async () => {
-    if (!viewerRef.current) return;
-    if (isVR) {
-      // Exit whichever mode is active
-      if (viewerRef.current.getIsCardboard()) {
-        viewerRef.current.exitCardboardMode();
-      } else {
-        viewerRef.current.exitVR();
-      }
-      setIsVR(false);
-    } else {
-      // Try WebXR first, fall back to cardboard stereo
-      if (vrSupported) {
-        const entered = await viewerRef.current.enterVR();
-        setIsVR(entered);
-      } else {
-        viewerRef.current.enterCardboardMode();
-        setIsVR(true);
-      }
+    if (viewerRef.current instanceof ViewerEngine) {
+      viewerRef.current.setAutoRotate(newState);
     }
-  }, [isVR, vrSupported]);
+  }, [isAutoRotating]);
 
   // Track mouse position for tooltip
   useEffect(() => {
@@ -214,21 +226,8 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
       <ViewerControls
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
-        isVR={isVR}
-        onToggleVR={toggleVR}
         visible={showUI}
       />
-
-      {/* Exit VR button — always visible in VR/cardboard mode */}
-      {isVR && (
-        <button
-          className="exit-vr-btn"
-          onClick={toggleVR}
-          aria-label="Exit VR mode"
-        >
-          Exit VR
-        </button>
-      )}
 
       {/* Hotspot tooltip */}
       {hoveredHotspot && (

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Scene, Hotspot } from '@/types/tour';
 import { generatePlaceholderEquirectangular } from './generate-placeholders';
+import { drawNavigationFloorRing, drawHotspotIcon } from './hotspot-sprites';
 
 export interface HotspotMesh {
   mesh: THREE.Group;
@@ -57,18 +58,6 @@ export class PanoramaViewer {
   private dollyTargetLat = 0;
   private dollyHotspot: Hotspot | null = null;
 
-  // VR / WebXR
-  private isVR = false;
-  private reticle: THREE.Mesh | null = null;
-  private gazeTarget: HotspotMesh | null = null;
-  private gazeTimer = 0;
-  private gazeDuration = 1.5;
-  private reticleRing: THREE.Mesh | null = null;
-
-  // Cardboard stereo mode (fallback when WebXR unavailable)
-  private isCardboard = false;
-  private stereoCamera = new THREE.StereoCamera();
-
   // Animation
   private animationId: number | null = null;
   private clock = new THREE.Clock();
@@ -97,7 +86,7 @@ export class PanoramaViewer {
       1100
     );
     this.camera.position.set(0, 0, 0.1);
-    this.scene.add(this.camera); // Add to scene so child objects (VR reticle) render
+    this.scene.add(this.camera);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -131,7 +120,7 @@ export class PanoramaViewer {
     // Events
     this.bindEvents();
 
-    // Start render loop (setAnimationLoop works for both normal and XR rendering)
+    // Start render loop
     this.renderer.setAnimationLoop(this.animate);
   }
 
@@ -304,87 +293,81 @@ export class PanoramaViewer {
     const delta = this.clock.getDelta();
     const elapsed = this.clock.getElapsedTime();
 
-    // In VR mode, head tracking handles the camera — skip manual controls
-    if (!this.isVR) {
-      // Auto-rotate
-      if (this.autoRotate && !this.isUserInteracting && !this.gyroEnabled) {
-        this.targetLon += this.autoRotateSpeed;
-      }
-
-      // Gyroscope
-      if (this.gyroEnabled && this.deviceOrientationData && !this.isUserInteracting) {
-        const { alpha, beta } = this.deviceOrientationData;
-
-        // Capture baseline yaw on first reading so the view doesn't jump
-        if (!this.gyroHasOffset) {
-          this.gyroAlphaOffset = alpha - this.lon;
-          this.gyroHasOffset = true;
-        }
-
-        // alpha = compass heading → yaw (works in both portrait and landscape)
-        // beta = forward/back tilt → pitch (same axis regardless of device rotation)
-        this.targetLon = alpha - this.gyroAlphaOffset;
-        this.targetLat = 90 - beta;
-      }
-
-      // Dolly animation (Matterport-style fly-to)
-      if (this.isDollying) {
-        this.dollyProgress += delta / this.dollyDuration;
-
-        if (this.dollyProgress >= 1) {
-          this.isDollying = false;
-          this.dollyProgress = 1;
-          if (this.dollyHotspot && this.onHotspotClick) {
-            const hotspot = this.dollyHotspot;
-            this.dollyHotspot = null;
-            this.onHotspotClick(hotspot);
-          }
-        }
-
-        const t = 1 - Math.pow(1 - this.dollyProgress, 3);
-
-        let lonDiff = this.dollyTargetLon - this.dollyStartLon;
-        if (lonDiff > 180) lonDiff -= 360;
-        if (lonDiff < -180) lonDiff += 360;
-
-        this.lon = this.dollyStartLon + lonDiff * t;
-        this.lat = this.dollyStartLat + (this.dollyTargetLat - this.dollyStartLat) * t;
-        this.targetLon = this.lon;
-        this.targetLat = this.lat;
-
-        this.fov = this.dollyStartFov + (30 - this.dollyStartFov) * t;
-        this.targetFov = this.fov;
-
-        const sphereMat = this.sphere.material as THREE.MeshBasicMaterial;
-        sphereMat.opacity = 1 - t * 0.9;
-      }
-
-      // Normal damped interpolation (skip during dolly)
-      if (!this.isDollying) {
-        this.lon += (this.targetLon - this.lon) * this.damping;
-        this.lat += (this.targetLat - this.lat) * this.damping;
-        this.fov += (this.targetFov - this.fov) * this.damping;
-      }
-      this.lat = Math.max(-85, Math.min(85, this.lat));
-
-      // Update camera
-      this.camera.fov = this.fov;
-      this.camera.updateProjectionMatrix();
-
-      const phi = THREE.MathUtils.degToRad(90 - this.lat);
-      const theta = THREE.MathUtils.degToRad(this.lon);
-
-      const target = new THREE.Vector3(
-        500 * Math.sin(phi) * Math.cos(theta),
-        500 * Math.cos(phi),
-        500 * Math.sin(phi) * Math.sin(theta)
-      );
-
-      this.camera.lookAt(target);
-    } else {
-      // VR gaze-based hotspot detection
-      this.updateVRGaze(delta);
+    // Auto-rotate
+    if (this.autoRotate && !this.isUserInteracting && !this.gyroEnabled) {
+      this.targetLon += this.autoRotateSpeed;
     }
+
+    // Gyroscope
+    if (this.gyroEnabled && this.deviceOrientationData && !this.isUserInteracting) {
+      const { alpha, beta } = this.deviceOrientationData;
+
+      // Capture baseline yaw on first reading so the view doesn't jump
+      if (!this.gyroHasOffset) {
+        this.gyroAlphaOffset = alpha - this.lon;
+        this.gyroHasOffset = true;
+      }
+
+      // alpha = compass heading → yaw (works in both portrait and landscape)
+      // beta = forward/back tilt → pitch (same axis regardless of device rotation)
+      this.targetLon = alpha - this.gyroAlphaOffset;
+      this.targetLat = 90 - beta;
+    }
+
+    // Dolly animation (Matterport-style fly-to)
+    if (this.isDollying) {
+      this.dollyProgress += delta / this.dollyDuration;
+
+      if (this.dollyProgress >= 1) {
+        this.isDollying = false;
+        this.dollyProgress = 1;
+        if (this.dollyHotspot && this.onHotspotClick) {
+          const hotspot = this.dollyHotspot;
+          this.dollyHotspot = null;
+          this.onHotspotClick(hotspot);
+        }
+      }
+
+      const t = 1 - Math.pow(1 - this.dollyProgress, 3);
+
+      let lonDiff = this.dollyTargetLon - this.dollyStartLon;
+      if (lonDiff > 180) lonDiff -= 360;
+      if (lonDiff < -180) lonDiff += 360;
+
+      this.lon = this.dollyStartLon + lonDiff * t;
+      this.lat = this.dollyStartLat + (this.dollyTargetLat - this.dollyStartLat) * t;
+      this.targetLon = this.lon;
+      this.targetLat = this.lat;
+
+      this.fov = this.dollyStartFov + (30 - this.dollyStartFov) * t;
+      this.targetFov = this.fov;
+
+      const sphereMat = this.sphere.material as THREE.MeshBasicMaterial;
+      sphereMat.opacity = 1 - t * 0.9;
+    }
+
+    // Normal damped interpolation (skip during dolly)
+    if (!this.isDollying) {
+      this.lon += (this.targetLon - this.lon) * this.damping;
+      this.lat += (this.targetLat - this.lat) * this.damping;
+      this.fov += (this.targetFov - this.fov) * this.damping;
+    }
+    this.lat = Math.max(-85, Math.min(85, this.lat));
+
+    // Update camera
+    this.camera.fov = this.fov;
+    this.camera.updateProjectionMatrix();
+
+    const phi = THREE.MathUtils.degToRad(90 - this.lat);
+    const theta = THREE.MathUtils.degToRad(this.lon);
+
+    const target = new THREE.Vector3(
+      500 * Math.sin(phi) * Math.cos(theta),
+      500 * Math.cos(phi),
+      500 * Math.sin(phi) * Math.sin(theta)
+    );
+
+    this.camera.lookAt(target);
 
     // Animate hotspots
     this.hotspotMeshes.forEach((hm) => {
@@ -420,249 +403,9 @@ export class PanoramaViewer {
       this.onViewChange(this.lon, this.lat, this.fov);
     }
 
-    // Render — stereo split for cardboard, normal otherwise
-    if (this.isCardboard) {
-      const size = this.renderer.getSize(new THREE.Vector2());
-      this.stereoCamera.update(this.camera);
-
-      this.renderer.setScissorTest(true);
-
-      // Left eye
-      this.renderer.setScissor(0, 0, size.x / 2, size.y);
-      this.renderer.setViewport(0, 0, size.x / 2, size.y);
-      this.renderer.render(this.scene, this.stereoCamera.cameraL);
-
-      // Right eye
-      this.renderer.setScissor(size.x / 2, 0, size.x / 2, size.y);
-      this.renderer.setViewport(size.x / 2, 0, size.x / 2, size.y);
-      this.renderer.render(this.scene, this.stereoCamera.cameraR);
-
-      this.renderer.setScissorTest(false);
-    } else {
-      this.renderer.render(this.scene, this.camera);
-    }
+    // Render
+    this.renderer.render(this.scene, this.camera);
   };
-
-  // --- VR Methods ---
-
-  private updateVRGaze(delta: number) {
-    // Raycast from camera center forward direction
-    const xrCamera = this.renderer.xr.isPresenting
-      ? this.renderer.xr.getCamera()
-      : this.camera;
-
-    const forward = new THREE.Vector3(0, 0, -1);
-    forward.applyQuaternion(xrCamera.quaternion);
-
-    this.raycaster.set(xrCamera.position, forward);
-
-    const sprites = this.hotspotMeshes.map(h => h.sprite);
-    const intersects = this.raycaster.intersectObjects(sprites);
-
-    if (intersects.length > 0) {
-      const hit = this.hotspotMeshes.find(h => h.sprite === intersects[0].object);
-      if (hit) {
-        if (this.gazeTarget === hit) {
-          this.gazeTimer += delta;
-          // Update reticle progress ring
-          this.updateReticleProgress(this.gazeTimer / this.gazeDuration);
-
-          if (this.gazeTimer >= this.gazeDuration) {
-            // Activate hotspot via gaze
-            if (this.onHotspotClick) {
-              if (hit.hotspot.type === 'navigation') {
-                this.onHotspotClick(hit.hotspot); // No dolly in VR
-              } else {
-                this.onHotspotClick(hit.hotspot);
-              }
-            }
-            this.gazeTimer = 0;
-            this.gazeTarget = null;
-            this.updateReticleProgress(0);
-          }
-        } else {
-          this.gazeTarget = hit;
-          this.gazeTimer = 0;
-          this.updateReticleProgress(0);
-        }
-        if (this.onHotspotHover) this.onHotspotHover(hit.hotspot);
-        return;
-      }
-    }
-
-    if (this.gazeTarget) {
-      this.gazeTarget = null;
-      this.gazeTimer = 0;
-      this.updateReticleProgress(0);
-    }
-    if (this.onHotspotHover) this.onHotspotHover(null);
-  }
-
-  private createReticle() {
-    // Center dot
-    const dotGeo = new THREE.RingGeometry(0.003, 0.008, 32);
-    const dotMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide,
-      depthTest: false,
-    });
-    this.reticle = new THREE.Mesh(dotGeo, dotMat);
-    this.reticle.position.set(0, 0, -2);
-    this.reticle.renderOrder = 9999;
-    this.camera.add(this.reticle);
-
-    // Progress ring (initially invisible)
-    const ringGeo = new THREE.RingGeometry(0.015, 0.02, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0,
-      side: THREE.DoubleSide,
-      depthTest: false,
-    });
-    this.reticleRing = new THREE.Mesh(ringGeo, ringMat);
-    this.reticleRing.position.set(0, 0, -2);
-    this.reticleRing.renderOrder = 9999;
-    this.camera.add(this.reticleRing);
-  }
-
-  private removeReticle() {
-    if (this.reticle) {
-      this.camera.remove(this.reticle);
-      this.reticle.geometry.dispose();
-      (this.reticle.material as THREE.MeshBasicMaterial).dispose();
-      this.reticle = null;
-    }
-    if (this.reticleRing) {
-      this.camera.remove(this.reticleRing);
-      this.reticleRing.geometry.dispose();
-      (this.reticleRing.material as THREE.MeshBasicMaterial).dispose();
-      this.reticleRing = null;
-    }
-  }
-
-  private updateReticleProgress(progress: number) {
-    if (!this.reticleRing) return;
-    const mat = this.reticleRing.material as THREE.MeshBasicMaterial;
-    mat.opacity = progress > 0 ? 0.9 : 0;
-    this.reticleRing.scale.setScalar(1 + progress * 0.5);
-  }
-
-  private setupXRControllers() {
-    for (let i = 0; i < 2; i++) {
-      const controller = this.renderer.xr.getController(i);
-      controller.addEventListener('selectstart', () => {
-        // Raycast from controller direction
-        const tempMatrix = new THREE.Matrix4();
-        tempMatrix.identity().extractRotation(controller.matrixWorld);
-        const direction = new THREE.Vector3(0, 0, -1).applyMatrix4(tempMatrix);
-        const pos = new THREE.Vector3();
-        controller.getWorldPosition(pos);
-
-        this.raycaster.set(pos, direction);
-        const sprites = this.hotspotMeshes.map(h => h.sprite);
-        const intersects = this.raycaster.intersectObjects(sprites);
-
-        if (intersects.length > 0) {
-          const hit = this.hotspotMeshes.find(h => h.sprite === intersects[0].object);
-          if (hit && this.onHotspotClick) {
-            this.onHotspotClick(hit.hotspot);
-          }
-        }
-      });
-      this.scene.add(controller);
-    }
-  }
-
-  static async isVRSupported(): Promise<boolean> {
-    if (!navigator.xr) return false;
-    try {
-      return await navigator.xr.isSessionSupported('immersive-vr');
-    } catch {
-      return false;
-    }
-  }
-
-  async enterVR(): Promise<boolean> {
-    if (!navigator.xr) return false;
-    try {
-      const session = await navigator.xr.requestSession('immersive-vr', {
-        optionalFeatures: ['local-floor', 'bounded-floor'],
-      });
-
-      this.renderer.xr.enabled = true;
-      await this.renderer.xr.setSession(session);
-      this.isVR = true;
-      this.createReticle();
-      this.setupXRControllers();
-
-      session.addEventListener('end', () => {
-        this.isVR = false;
-        this.renderer.xr.enabled = false;
-        this.removeReticle();
-        this.gazeTarget = null;
-        this.gazeTimer = 0;
-      });
-
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  exitVR() {
-    const session = this.renderer.xr.getSession();
-    if (session) session.end();
-  }
-
-  getIsVR() {
-    return this.isVR || this.isCardboard;
-  }
-
-  // --- Cardboard Stereo Mode (no WebXR needed) ---
-
-  enterCardboardMode() {
-    this.isCardboard = true;
-    this.stereoCamera.eyeSep = 0.064; // 64mm interpupillary distance
-
-    // Reset gyro offset so landscape orientation recalibrates from current heading
-    this.gyroHasOffset = false;
-    this.setGyroEnabled(true);
-
-    // Fullscreen + landscape lock for phone-in-headset
-    this.container.requestFullscreen?.().catch(() => {});
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (screen.orientation as any)?.lock?.('landscape').catch(() => {});
-    } catch {
-      // orientation lock not supported
-    }
-  }
-
-  exitCardboardMode() {
-    this.isCardboard = false;
-    this.setGyroEnabled(false);
-
-    // Reset viewport to full canvas
-    this.renderer.setScissorTest(false);
-    this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
-
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.().catch(() => {});
-    }
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (screen.orientation as any)?.unlock?.();
-    } catch {
-      // orientation unlock not supported
-    }
-  }
-
-  getIsCardboard() {
-    return this.isCardboard;
-  }
 
   // Public API
 
@@ -759,9 +502,9 @@ export class PanoramaViewer {
       const ctx = canvas.getContext('2d')!;
 
       if (isNav) {
-        this.drawNavigationFloorRing(ctx);
+        drawNavigationFloorRing(ctx);
       } else {
-        this.drawHotspotIcon(ctx, hotspot.type, hotspot.pulseColor);
+        drawHotspotIcon(ctx, hotspot.type, hotspot.pulseColor);
       }
 
       const spriteTexture = new THREE.CanvasTexture(canvas);
@@ -785,124 +528,6 @@ export class PanoramaViewer {
 
       this.hotspotMeshes.push({ mesh: group, hotspot, sprite });
     });
-  }
-
-  private drawNavigationFloorRing(ctx: CanvasRenderingContext2D) {
-    const cx = 128, cy = 128;
-
-    // Outer glow — large soft halo
-    const glowGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 120);
-    glowGrad.addColorStop(0, 'rgba(255,255,255,0.45)');
-    glowGrad.addColorStop(0.35, 'rgba(255,255,255,0.15)');
-    glowGrad.addColorStop(0.7, 'rgba(255,255,255,0.05)');
-    glowGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 120, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Translucent filled disc
-    const discGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
-    discGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
-    discGrad.addColorStop(1, 'rgba(255,255,255,0.12)');
-    ctx.fillStyle = discGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 50, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Outer ring border
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 50, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Inner ring
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 34, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Center chevron (downward arrow — "walk here")
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + 12);
-    ctx.lineTo(cx - 10, cy - 4);
-    ctx.lineTo(cx - 4, cy - 4);
-    ctx.lineTo(cx - 4, cy - 14);
-    ctx.lineTo(cx + 4, cy - 14);
-    ctx.lineTo(cx + 4, cy - 4);
-    ctx.lineTo(cx + 10, cy - 4);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  private drawHotspotIcon(ctx: CanvasRenderingContext2D, type: string, _customColor?: string) {
-    const cx = 64, cy = 64, r = 48;
-
-    // Outer glow — soft white
-    const grad = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
-    grad.addColorStop(0, 'rgba(255,255,255,0.6)');
-    grad.addColorStop(0.35, 'rgba(255,255,255,0.2)');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Inner circle
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 16, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Outline ring for extra visibility
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 24, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Center icon — black on white
-    ctx.fillStyle = '#000000';
-    ctx.beginPath();
-
-    switch (type) {
-      case 'navigation':
-        // Arrow
-        ctx.moveTo(cx - 6, cy + 4);
-        ctx.lineTo(cx, cy - 8);
-        ctx.lineTo(cx + 6, cy + 4);
-        ctx.closePath();
-        break;
-      case 'image':
-        // Small square
-        ctx.rect(cx - 6, cy - 5, 12, 10);
-        break;
-      case 'video':
-        // Play triangle
-        ctx.moveTo(cx - 4, cy - 6);
-        ctx.lineTo(cx + 6, cy);
-        ctx.lineTo(cx - 4, cy + 6);
-        ctx.closePath();
-        break;
-      case 'link':
-        // External link arrow
-        ctx.moveTo(cx - 5, cy + 5);
-        ctx.lineTo(cx + 5, cy - 5);
-        ctx.lineTo(cx + 5, cy);
-        ctx.moveTo(cx + 5, cy - 5);
-        ctx.lineTo(cx, cy - 5);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#000000';
-        ctx.stroke();
-        return;
-      default:
-        // Info dot
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-    }
-    ctx.fill();
   }
 
   // Preload textures for adjacent scenes
@@ -963,9 +588,6 @@ export class PanoramaViewer {
 
   dispose() {
     this.renderer.setAnimationLoop(null);
-    if (this.isCardboard) this.exitCardboardMode();
-    this.exitVR();
-    this.removeReticle();
 
     const el = this.renderer.domElement;
     el.removeEventListener('pointerdown', this.onPointerDown);

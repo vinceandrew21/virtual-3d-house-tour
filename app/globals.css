@@ -461,31 +461,92 @@ body {
   color: var(--text-primary);
 }
 
-/* --- Exit VR Button --- */
-.exit-vr-btn {
+/* --- Walkable Mode --- */
+
+.walkable-crosshair {
   position: absolute;
-  bottom: 32px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  padding: 10px 28px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: var(--radius-full);
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: all var(--transition-gentle);
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
 }
 
-.exit-vr-btn:hover,
-.exit-vr-btn:active {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
+.walkable-crosshair::before,
+.walkable-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.walkable-crosshair::before {
+  top: 50%;
+  left: 2px;
+  right: 2px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.walkable-crosshair::after {
+  left: 50%;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.walkable-instructions {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.walkable-instructions-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.walkable-mobile-hint {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hintFadeOut 4s ease-in-out forwards;
+}
+
+@keyframes hintFadeOut {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* --- Hotspot Tooltip --- */
