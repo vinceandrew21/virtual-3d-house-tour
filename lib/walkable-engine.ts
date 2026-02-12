@@ -64,6 +64,10 @@ export class WalkableViewer {
   private prevTouchY = 0;
   private touchSensitivity = 0.004;
 
+  // Pending click (processed in animation loop for reliable raycasting)
+  private pendingClick = false;
+  private clickCoords = new THREE.Vector2();
+
   // Teleport animation
   private teleportFrom = new THREE.Vector3();
   private teleportTarget = new THREE.Vector3();
@@ -130,8 +134,9 @@ export class WalkableViewer {
     // Mouse: click-and-drag to look, click to interact with hotspots
     el.addEventListener('mousedown', this.handleMouseDown);
     el.addEventListener('mousemove', this.handleMouseMove);
-    el.addEventListener('mouseup', this.handleMouseUp);
-    el.addEventListener('mouseleave', this.handleMouseUp);
+    // Bind mouseup on window so it's never missed (UI overlays can steal canvas mouseup)
+    window.addEventListener('mouseup', this.handleMouseUp);
+    el.addEventListener('mouseleave', this.handleMouseLeave);
 
     // Keyboard: WASD (optional movement)
     document.addEventListener('keydown', this.handleKeyDown);
@@ -155,7 +160,7 @@ export class WalkableViewer {
 
   private handleMouseMove = (e: MouseEvent) => {
     // Always update mouse position for hover raycasting
-    const rect = this.container.getBoundingClientRect();
+    const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
@@ -165,15 +170,18 @@ export class WalkableViewer {
     const dy = e.clientY - this.dragStartY;
 
     // Mark as a drag if moved enough
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    if (!this.dragMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
       this.dragMoved = true;
     }
 
-    this.euler.setFromQuaternion(this.camera.quaternion);
-    this.euler.y += (e.clientX - this.dragStartX) * this.mouseSensitivity;
-    this.euler.x += (e.clientY - this.dragStartY) * this.mouseSensitivity;
-    this.euler.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.euler.x));
-    this.camera.quaternion.setFromEuler(this.euler);
+    // Only rotate camera once drag threshold is exceeded (keeps camera stable for clicks)
+    if (this.dragMoved) {
+      this.euler.setFromQuaternion(this.camera.quaternion);
+      this.euler.y += (e.clientX - this.dragStartX) * this.mouseSensitivity;
+      this.euler.x += (e.clientY - this.dragStartY) * this.mouseSensitivity;
+      this.euler.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.euler.x));
+      this.camera.quaternion.setFromEuler(this.euler);
+    }
 
     this.dragStartX = e.clientX;
     this.dragStartY = e.clientY;
@@ -184,13 +192,19 @@ export class WalkableViewer {
     this.isDragging = false;
     this.renderer.domElement.style.cursor = 'grab';
 
-    // If it was a click (not a drag), check hotspot intersection
-    if (!this.dragMoved && e.type === 'mouseup') {
-      const rect = this.container.getBoundingClientRect();
-      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      this.checkHotspotIntersection(true);
+    // If it was a click (not a drag), schedule hotspot check for next animation frame
+    if (!this.dragMoved) {
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      this.clickCoords.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      this.clickCoords.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      this.pendingClick = true;
     }
+  };
+
+  private handleMouseLeave = () => {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    this.renderer.domElement.style.cursor = 'grab';
   };
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -227,14 +241,19 @@ export class WalkableViewer {
     e.preventDefault();
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      const dx = t.clientX - this.prevTouchX;
-      const dy = t.clientY - this.prevTouchY;
 
-      this.euler.setFromQuaternion(this.camera.quaternion);
-      this.euler.y += dx * this.touchSensitivity;
-      this.euler.x += dy * this.touchSensitivity;
-      this.euler.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.euler.x));
-      this.camera.quaternion.setFromEuler(this.euler);
+      // Only rotate camera once past tap threshold (keeps camera stable for taps)
+      const totalDist = Math.hypot(t.clientX - this.touchStartX, t.clientY - this.touchStartY);
+      if (totalDist > 15) {
+        const dx = t.clientX - this.prevTouchX;
+        const dy = t.clientY - this.prevTouchY;
+
+        this.euler.setFromQuaternion(this.camera.quaternion);
+        this.euler.y += dx * this.touchSensitivity;
+        this.euler.x += dy * this.touchSensitivity;
+        this.euler.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.euler.x));
+        this.camera.quaternion.setFromEuler(this.euler);
+      }
 
       this.prevTouchX = t.clientX;
       this.prevTouchY = t.clientY;
@@ -247,13 +266,12 @@ export class WalkableViewer {
     const ct = e.changedTouches[0];
     const dist = Math.hypot(ct.clientX - this.touchStartX, ct.clientY - this.touchStartY);
 
-    // Detect tap: short duration and minimal movement
+    // Detect tap: short duration and minimal movement — schedule for next animation frame
     if (elapsed < 300 && dist < 15) {
-      const rect = this.container.getBoundingClientRect();
-      this.mouse.x = ((ct.clientX - rect.left) / rect.width) * 2 - 1;
-      this.mouse.y = -((ct.clientY - rect.top) / rect.height) * 2 + 1;
-
-      this.checkHotspotIntersection(true);
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      this.clickCoords.x = ((ct.clientX - rect.left) / rect.width) * 2 - 1;
+      this.clickCoords.y = -((ct.clientY - rect.top) / rect.height) * 2 + 1;
+      this.pendingClick = true;
     }
   };
 
@@ -341,6 +359,13 @@ export class WalkableViewer {
     // Hotspot hover (skip on touch)
     if (!this.isTouchDevice) {
       this.checkHotspotIntersection(false);
+    }
+
+    // Process pending click (deferred from event handler for reliable raycasting)
+    if (this.pendingClick) {
+      this.pendingClick = false;
+      this.mouse.copy(this.clickCoords);
+      this.checkHotspotIntersection(true);
     }
 
     // Animate hotspots
@@ -714,11 +739,10 @@ export class WalkableViewer {
 
   teleportToPosition(pos: { x: number; y: number; z: number }) {
     const target = new THREE.Vector3(pos.x, this.playerHeight, pos.z);
-    if (this.isPositionValid(target)) {
-      this.teleportFrom.copy(this.camera.position);
-      this.teleportTarget.copy(target);
-      this.teleportProgress = 0;
-    }
+    // Always teleport to developer-placed hotspot targets (skip collision check)
+    this.teleportFrom.copy(this.camera.position);
+    this.teleportTarget.copy(target);
+    this.teleportProgress = 0;
   }
 
   getRenderer() {
@@ -731,8 +755,8 @@ export class WalkableViewer {
     const el = this.renderer.domElement;
     el.removeEventListener('mousedown', this.handleMouseDown);
     el.removeEventListener('mousemove', this.handleMouseMove);
-    el.removeEventListener('mouseup', this.handleMouseUp);
-    el.removeEventListener('mouseleave', this.handleMouseUp);
+    window.removeEventListener('mouseup', this.handleMouseUp);
+    el.removeEventListener('mouseleave', this.handleMouseLeave);
     el.removeEventListener('touchstart', this.handleTouchStart);
     el.removeEventListener('touchmove', this.handleTouchMove);
     el.removeEventListener('touchend', this.handleTouchEnd);

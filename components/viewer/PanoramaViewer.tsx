@@ -165,20 +165,28 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
     }
   }, [isAutoRotating]);
 
-  // Track mouse position for tooltip
+  // Track mouse/touch for UI visibility and tooltip position
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-
-      // Show UI on mouse move, hide after delay
+    const resetUITimer = () => {
       setShowUI(true);
       if (hideUITimeout.current) clearTimeout(hideUITimeout.current);
       hideUITimeout.current = setTimeout(() => setShowUI(false), 4000);
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+      resetUITimer();
+    };
+
+    const handleTouchStart = () => {
+      resetUITimer();
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchstart', handleTouchStart);
       if (hideUITimeout.current) clearTimeout(hideUITimeout.current);
     };
   }, []);
