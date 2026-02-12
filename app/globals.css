@@ -331,7 +331,8 @@ body {
 }
 
 .scene-selector-list.expanded {
-  max-height: 400px;
+  max-height: 60vh;
+  overflow-y: auto;
   opacity: 1;
   transform: translateX(-50%) scale(1);
   padding: 6px;
