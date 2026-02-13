@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import ImageUpload from '@/components/admin/ImageUpload';
+import { Property } from '@/types/admin';
+import { TourConfig } from '@/types/tour';
 
 export default function NewScenePage() {
   const params = useParams();
@@ -14,6 +16,21 @@ export default function NewScenePage() {
   const [description, setDescription] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [tourName, setTourName] = useState('Tour');
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/admin/tours/${tourId}`).then(r => r.json()),
+      fetch('/api/admin/properties').then(r => r.json()),
+    ]).then(([tourData, propsData]) => {
+      if (tourData.success) setTourName(tourData.data.name);
+      if (propsData.success) {
+        const p = (propsData.data as Property[]).find(p => p.tourIds.includes(tourId));
+        setProperty(p || null);
+      }
+    });
+  }, [tourId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +68,8 @@ export default function NewScenePage() {
       <AdminPageHeader
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
-          { label: 'Tour', href: `/admin/tours/${tourId}` },
+          ...(property ? [{ label: property.name, href: `/admin/properties/${property.id}` }] : []),
+          { label: tourName, href: `/admin/tours/${tourId}` },
           { label: 'New Room' },
         ]}
         title="Add New Room"

@@ -8,6 +8,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import ImageUpload from '@/components/admin/ImageUpload';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { TourConfig, Scene, Hotspot, HotspotType } from '@/types/tour';
+import { Property } from '@/types/admin';
 
 const PanoramaHotspotEditor = dynamic(
   () => import('@/components/admin/PanoramaHotspotEditor'),
@@ -29,6 +30,7 @@ export default function SceneDetailPage() {
 
   const [tour, setTour] = useState<TourConfig | null>(null);
   const [scene, setScene] = useState<Scene | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Scene editing
@@ -50,8 +52,13 @@ export default function SceneDetailPage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`/api/admin/tours/${tourId}`);
-      const data = await res.json();
+      const [tourRes, propsRes] = await Promise.all([
+        fetch(`/api/admin/tours/${tourId}`),
+        fetch('/api/admin/properties'),
+      ]);
+      const data = await tourRes.json();
+      const propsData = await propsRes.json();
+
       if (data.success) {
         setTour(data.data);
         const s = data.data.scenes.find((sc: Scene) => sc.id === sceneId);
@@ -60,6 +67,12 @@ export default function SceneDetailPage() {
           setSceneName(s.name);
           setSceneDesc(s.description || '');
         }
+      }
+      if (propsData.success) {
+        const ownerProperty = (propsData.data as Property[]).find(p =>
+          p.tourIds.includes(tourId)
+        );
+        setProperty(ownerProperty || null);
       }
     } finally {
       setLoading(false);
@@ -157,6 +170,7 @@ export default function SceneDetailPage() {
       <AdminPageHeader
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
+          ...(property ? [{ label: property.name, href: `/admin/properties/${property.id}` }] : []),
           { label: tour.name, href: `/admin/tours/${tourId}` },
           { label: scene.name },
         ]}

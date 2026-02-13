@@ -3,21 +3,21 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
-import TourCard from '@/components/admin/TourCard';
+import PropertyCard from '@/components/admin/PropertyCard';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
-import { TourIndexEntry } from '@/types/admin';
+import { Property } from '@/types/admin';
 
 export default function AdminDashboard() {
-  const [tours, setTours] = useState<TourIndexEntry[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const fetchTours = async () => {
+  const fetchProperties = async () => {
     try {
-      const res = await fetch('/api/admin/tours');
+      const res = await fetch('/api/admin/properties');
       const data = await res.json();
       if (data.success) {
-        setTours(data.data);
+        setProperties(data.data);
       }
     } finally {
       setLoading(false);
@@ -25,45 +25,50 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchTours();
+    fetchProperties();
   }, []);
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/admin/tours/${id}`, { method: 'DELETE' });
+    await fetch(`/api/admin/properties/${id}`, { method: 'DELETE' });
     setDeleteId(null);
-    fetchTours();
+    fetchProperties();
   };
 
   return (
     <>
       <AdminPageHeader
         breadcrumbs={[{ label: 'Admin' }]}
-        title="Tours"
-        description="Manage your virtual tour properties"
+        title="Properties"
+        description="Manage your properties and virtual tours"
         action={
-          <Link href="/admin/tours/new" className="admin-btn admin-btn-primary">
-            + New Tour
+          <Link href="/admin/properties/new" className="admin-btn admin-btn-primary">
+            + New Property
           </Link>
         }
       />
 
       {loading ? (
-        <div className="admin-loading">Loading tours...</div>
-      ) : tours.length === 0 ? (
+        <div className="admin-loading">Loading properties...</div>
+      ) : properties.length === 0 ? (
         <div className="admin-empty">
-          <div className="admin-empty-icon">360</div>
-          <div className="admin-empty-title">No tours yet</div>
-          <p className="admin-empty-text">Create your first virtual tour to get started.</p>
-          <Link href="/admin/tours/new" className="admin-btn admin-btn-primary">
-            + Create Tour
+          <div className="admin-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ opacity: 0.3 }}>
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </div>
+          <div className="admin-empty-title">No properties yet</div>
+          <p className="admin-empty-text">Create your first property to start organizing virtual tours.</p>
+          <Link href="/admin/properties/new" className="admin-btn admin-btn-primary">
+            + Create Property
           </Link>
         </div>
       ) : (
         <div className="admin-card-grid">
-          {tours.map(tour => (
-            <TourCard
-              key={tour.id}
-              tour={tour}
+          {properties.map(property => (
+            <PropertyCard
+              key={property.id}
+              property={property}
               onDelete={(id) => setDeleteId(id)}
             />
           ))}
@@ -72,8 +77,8 @@ export default function AdminDashboard() {
 
       {deleteId && (
         <ConfirmDialog
-          title="Delete Tour"
-          message="This will permanently delete this tour and all its scenes, photos, and hotspots. This action cannot be undone."
+          title="Delete Property"
+          message="This will permanently delete this property and all its tours, scenes, photos, and hotspots. This action cannot be undone."
           onConfirm={() => handleDelete(deleteId)}
           onCancel={() => setDeleteId(null)}
         />

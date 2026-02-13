@@ -8,6 +8,7 @@ import TourForm from '@/components/admin/TourForm';
 import SceneCard from '@/components/admin/SceneCard';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { TourConfig } from '@/types/tour';
+import { Property } from '@/types/admin';
 
 export default function TourDetailPage() {
   const params = useParams();
@@ -15,16 +16,28 @@ export default function TourDetailPage() {
   const tourId = params.tourId as string;
 
   const [tour, setTour] = useState<TourConfig | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleteSceneId, setDeleteSceneId] = useState<string | null>(null);
 
   const fetchTour = async () => {
     try {
-      const res = await fetch(`/api/admin/tours/${tourId}`);
-      const data = await res.json();
-      if (data.success) {
-        setTour(data.data);
+      const [tourRes, propsRes] = await Promise.all([
+        fetch(`/api/admin/tours/${tourId}`),
+        fetch('/api/admin/properties'),
+      ]);
+      const tourData = await tourRes.json();
+      const propsData = await propsRes.json();
+
+      if (tourData.success) {
+        setTour(tourData.data);
+      }
+      if (propsData.success) {
+        const ownerProperty = (propsData.data as Property[]).find(p =>
+          p.tourIds.includes(tourId)
+        );
+        setProperty(ownerProperty || null);
       }
     } finally {
       setLoading(false);
@@ -86,6 +99,7 @@ export default function TourDetailPage() {
       <AdminPageHeader
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
+          ...(property ? [{ label: property.name, href: `/admin/properties/${property.id}` }] : []),
           { label: tour.name },
         ]}
         title={tour.name}

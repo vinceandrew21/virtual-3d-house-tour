@@ -1,5 +1,18 @@
 import { HotspotType } from './tour';
 
+export interface Property {
+  id: string;
+  name: string;
+  address?: string;
+  clientName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+  tourIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TourIndexEntry {
   id: string;
   name: string;

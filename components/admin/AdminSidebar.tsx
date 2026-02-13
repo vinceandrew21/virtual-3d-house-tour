@@ -28,15 +28,15 @@ export default function AdminSidebar() {
         </Link>
 
         <Link
-          href="/admin/tours/new"
-          className={`admin-nav-link ${pathname === '/admin/tours/new' ? 'active' : ''}`}
+          href="/admin/properties/new"
+          className={`admin-nav-link ${pathname === '/admin/properties/new' ? 'active' : ''}`}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="16" />
             <line x1="8" y1="12" x2="16" y2="12" />
           </svg>
-          New Tour
+          New Property
         </Link>
       </nav>
 
@@ -49,6 +49,20 @@ export default function AdminSidebar() {
           </svg>
           View Live Site
         </Link>
+        <button
+          className="admin-nav-link admin-logout-btn"
+          onClick={async () => {
+            await fetch('/api/admin/auth', { method: 'DELETE' });
+            window.location.reload();
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Sign Out
+        </button>
       </div>
     </aside>
   );

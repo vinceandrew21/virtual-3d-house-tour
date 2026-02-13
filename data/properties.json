@@ -1,0 +1,30 @@
+{
+  "properties": [
+    {
+      "id": "default-o50m",
+      "name": "Bahay ni bins",
+      "tourIds": [
+        "awew-3ctv"
+      ],
+      "createdAt": "2026-02-13T19:16:02.742Z",
+      "updatedAt": "2026-02-13T19:20:25.353Z",
+      "address": "Blk 37 Lt. 43 St. Therese Deca Homes",
+      "clientName": "binsoy",
+      "contactPhone": "34534543543543",
+      "contactEmail": "vincea806@gmail.com",
+      "notes": "malupet"
+    },
+    {
+      "id": "bahay-ni-johan-euaa",
+      "name": "Bahay ni johann",
+      "tourIds": [],
+      "createdAt": "2026-02-13T19:21:36.797Z",
+      "updatedAt": "2026-02-13T19:26:25.816Z",
+      "address": "bankers village",
+      "clientName": "johan",
+      "contactPhone": "12312321321321",
+      "contactEmail": "decvember@gmail.com",
+      "notes": "12312312321"
+    }
+  ]
+}

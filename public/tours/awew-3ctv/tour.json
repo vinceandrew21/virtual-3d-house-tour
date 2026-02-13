@@ -25,6 +25,15 @@
           },
           "tooltip": "Move forward",
           "targetScene": "as-2"
+        },
+        {
+          "id": "as-1-info-z9fz",
+          "type": "info",
+          "position": {
+            "yaw": 58,
+            "pitch": -14
+          },
+          "tooltip": "TV na malupet"
         }
       ]
     },
