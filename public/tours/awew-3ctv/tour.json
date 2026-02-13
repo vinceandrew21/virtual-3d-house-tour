@@ -1,0 +1,115 @@
+{
+  "id": "awew-3ctv",
+  "name": "awew",
+  "description": "sa",
+  "author": "sa",
+  "defaultScene": "as-1",
+  "scenes": [
+    {
+      "id": "as-1",
+      "name": "as - 1",
+      "description": "sa",
+      "imageUrl": "/tours/awew-3ctv/as-1.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "as-1-nav-forward",
+          "type": "navigation",
+          "position": {
+            "yaw": 0,
+            "pitch": -30
+          },
+          "tooltip": "Move forward",
+          "targetScene": "as-2"
+        }
+      ]
+    },
+    {
+      "id": "as-2",
+      "name": "as - 2",
+      "description": "sa",
+      "imageUrl": "/tours/awew-3ctv/as-2.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "as-2-info-mzhp",
+          "type": "info",
+          "position": {
+            "yaw": 60,
+            "pitch": -15
+          },
+          "tooltip": "UPUAN PANG MAYAMAN"
+        },
+        {
+          "id": "as-2-info-6xhu",
+          "type": "info",
+          "position": {
+            "yaw": -164,
+            "pitch": -8
+          },
+          "tooltip": "KITCHEN PANG MAYAMAN"
+        },
+        {
+          "id": "as-2-info-aejx",
+          "type": "info",
+          "position": {
+            "yaw": -75,
+            "pitch": -14
+          },
+          "tooltip": "SINK PANG MAYAMAN DIN"
+        },
+        {
+          "id": "as-2-navigation-207l",
+          "type": "navigation",
+          "position": {
+            "yaw": 94,
+            "pitch": -34
+          },
+          "tooltip": "Papuntang biringan",
+          "targetScene": "as-1"
+        },
+        {
+          "id": "as-2-navigation-r1t8",
+          "type": "navigation",
+          "position": {
+            "yaw": -110,
+            "pitch": -46
+          },
+          "tooltip": "papuntang makati",
+          "targetScene": "as-3"
+        }
+      ]
+    },
+    {
+      "id": "as-3",
+      "name": "as - 3",
+      "description": "sa",
+      "imageUrl": "/tours/awew-3ctv/as-3.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "as-3-nav-back",
+          "type": "navigation",
+          "position": {
+            "yaw": 180,
+            "pitch": -30
+          },
+          "tooltip": "Move back",
+          "targetScene": "as-2"
+        }
+      ]
+    }
+  ]
+}

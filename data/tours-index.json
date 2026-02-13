@@ -1,0 +1,13 @@
+{
+  "tours": [
+    {
+      "id": "awew-3ctv",
+      "name": "awew",
+      "description": "sa",
+      "thumbnail": "/tours/awew-3ctv/as-1.jpg",
+      "sceneCount": 3,
+      "createdAt": "2026-02-13T16:34:57.839Z",
+      "updatedAt": "2026-02-13T17:18:41.063Z"
+    }
+  ]
+}
