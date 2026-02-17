@@ -113,7 +113,7 @@ export default function ServicesSection() {
 
   return (
     <section ref={sectionRef} id="services">
-      <div className="landing-container" style={{ paddingBottom: 40 }}>
+      <div className="landing-container" style={{ paddingTop: 120, paddingBottom: 40 }}>
         <div className="landing-services-label">What We Do</div>
       </div>
       {services.map((s, i) => (

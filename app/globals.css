@@ -1092,7 +1092,7 @@ button:focus:not(:focus-visible) {
   align-items: center;
   gap: 10px;
   color: var(--landing-text-muted);
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   font-weight: 400;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -1116,12 +1116,13 @@ button:focus:not(:focus-visible) {
 }
 
 .landing-services-label {
-  font-size: 0.75rem;
+  font-size: 2rem;
   font-weight: 500;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--landing-text-muted);
+  color: var(--landing-text);
   margin-bottom: 48px;
+  text-align: center;
 }
 
 .landing-service-block {
@@ -1170,7 +1171,7 @@ button:focus:not(:focus-visible) {
 }
 
 .landing-about-label {
-  font-size: 0.75rem;
+  font-size: 1.25rem;
   font-weight: 500;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -1366,12 +1367,13 @@ button:focus:not(:focus-visible) {
 }
 
 .landing-showcase-label {
-  font-size: 0.75rem;
+  font-size: 2rem;
   font-weight: 500;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--landing-text-muted);
+  color: var(--landing-text);
   margin-bottom: 56px;
+  text-align: center;
 }
 
 .landing-showcase-grid {
@@ -1484,11 +1486,11 @@ button:focus:not(:focus-visible) {
 }
 
 .landing-split-title {
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.12;
-  margin-bottom: 20px;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-bottom: 24px;
 }
 
 .landing-split-desc {
