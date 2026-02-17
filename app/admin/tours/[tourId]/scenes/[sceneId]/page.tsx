@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import ImageUpload from '@/components/admin/ImageUpload';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
-import { TourConfig, Scene, Hotspot, HotspotType } from '@/types/tour';
+import { TourConfig, Scene, HotspotType, Room } from '@/types/tour';
 import { Property } from '@/types/admin';
 
 const PanoramaHotspotEditor = dynamic(
@@ -155,7 +155,7 @@ export default function SceneDetailPage() {
   if (!tour || !scene) {
     return (
       <div className="admin-empty">
-        <div className="admin-empty-title">Scene not found</div>
+        <div className="admin-empty-title">Photo not found</div>
         <Link href={`/admin/tours/${tourId}`} className="admin-btn admin-btn-primary" style={{ marginTop: 16 }}>
           Back to Tour
         </Link>
@@ -163,7 +163,25 @@ export default function SceneDetailPage() {
     );
   }
 
-  const otherScenes = tour.scenes.filter(s => s.id !== sceneId);
+  // Build list of other rooms (with at least one photo) for navigation dropdown
+  const rooms = (tour.rooms || []);
+  const sameRoomPhotos = tour.scenes.filter(
+    s => s.roomId === scene.roomId && s.id !== scene.id
+  );
+  const otherRooms = rooms
+    .filter(r => r.id !== scene.roomId)
+    .map(r => {
+      const roomPhotos = tour.scenes.filter(s => s.roomId === r.id);
+      return { room: r, firstSceneId: roomPhotos[0]?.id, photoCount: roomPhotos.length };
+    })
+    .filter(r => r.firstSceneId); // only rooms with at least one photo
+
+  const sceneRoom: Room | undefined = scene.roomId
+    ? (tour.rooms || []).find(r => r.id === scene.roomId)
+    : undefined;
+  const floorName = sceneRoom?.floorId
+    ? tour.floors?.find(f => f.id === sceneRoom.floorId)?.name
+    : undefined;
 
   return (
     <>
@@ -172,6 +190,8 @@ export default function SceneDetailPage() {
           { label: 'Admin', href: '/admin' },
           ...(property ? [{ label: property.name, href: `/admin/properties/${property.id}` }] : []),
           { label: tour.name, href: `/admin/tours/${tourId}` },
+          ...(floorName ? [{ label: floorName }] : []),
+          ...(sceneRoom ? [{ label: sceneRoom.name, href: `/admin/tours/${tourId}/rooms/${sceneRoom.id}` }] : []),
           { label: scene.name },
         ]}
         title={scene.name}
@@ -181,7 +201,7 @@ export default function SceneDetailPage() {
             className="admin-btn admin-btn-secondary"
             onClick={() => { setEditingScene(!editingScene); setClickedPos(null); }}
           >
-            {editingScene ? 'Cancel' : 'Edit Room'}
+            {editingScene ? 'Cancel' : 'Edit Photo'}
           </button>
         }
       />
@@ -191,7 +211,7 @@ export default function SceneDetailPage() {
         <div style={{ marginBottom: 32 }}>
           <div className="admin-form">
             <div className="admin-field">
-              <label className="admin-label">Room Name</label>
+              <label className="admin-label">Photo Name</label>
               <input
                 className="admin-input"
                 type="text"
@@ -270,10 +290,21 @@ export default function SceneDetailPage() {
                   value={placingTarget}
                   onChange={e => setPlacingTarget(e.target.value)}
                 >
-                  <option value="">Select a photo/room...</option>
-                  {otherScenes.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
+                  <option value="">Select a destination...</option>
+                  {sameRoomPhotos.length > 0 && (
+                    <optgroup label={sceneRoom ? `${sceneRoom.name} (same room)` : 'Same room'}>
+                      {sameRoomPhotos.map(photo => (
+                        <option key={photo.id} value={photo.id}>{photo.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {otherRooms.length > 0 && (
+                    <optgroup label="Other rooms">
+                      {otherRooms.map(({ room, firstSceneId }) => (
+                        <option key={room.id} value={firstSceneId}>{room.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
             )}
@@ -336,7 +367,13 @@ export default function SceneDetailPage() {
                   </td>
                   <td>
                     {hotspot.targetScene
-                      ? tour.scenes.find(s => s.id === hotspot.targetScene)?.name || hotspot.targetScene
+                      ? (() => {
+                          const targetScene = tour.scenes.find(s => s.id === hotspot.targetScene);
+                          const targetRoom = targetScene?.roomId
+                            ? rooms.find(r => r.id === targetScene.roomId)
+                            : undefined;
+                          return targetRoom?.name || targetScene?.name || hotspot.targetScene;
+                        })()
                       : '-'}
                   </td>
                   <td>

@@ -64,10 +64,23 @@ export class PanoramaViewer {
   private isTransitioning = false;
   private transitionProgress = 0;
 
+  // Zoom transition (same-room swap)
+  private isZoomTransitioning = false;
+  private zoomPhase: 'out' | 'in' = 'out';
+  private zoomProgress = 0;
+  private zoomDuration = 0.25;
+  private zoomStartFov = 75;
+  private zoomPeakFov = 110;
+  private zoomRestoreFov = 75;
+  private pendingSceneData: Scene | null = null;
+  private pendingTexture: THREE.Texture | null = null;
+  private zoomResolve: (() => void) | null = null;
+
   // Callbacks
   private onHotspotHover: ((hotspot: Hotspot | null) => void) | null = null;
   private onHotspotClick: ((hotspot: Hotspot) => void) | null = null;
   private onViewChange: ((yaw: number, pitch: number, fov: number) => void) | null = null;
+  private shouldDolly: ((hotspot: Hotspot) => boolean) | null = null;
 
   // Cached textures
   private textureCache = new Map<string, THREE.Texture>();
@@ -259,7 +272,12 @@ export class PanoramaViewer {
         this.renderer.domElement.style.cursor = 'pointer';
         if (isClick && this.onHotspotClick) {
           if (hit.hotspot.type === 'navigation' && !this.isDollying) {
-            this.startDolly(hit.hotspot);
+            const doDolly = this.shouldDolly ? this.shouldDolly(hit.hotspot) : true;
+            if (doDolly) {
+              this.startDolly(hit.hotspot);
+            } else {
+              this.onHotspotClick(hit.hotspot);
+            }
           } else if (hit.hotspot.type !== 'navigation') {
             this.onHotspotClick(hit.hotspot);
           }
@@ -387,6 +405,45 @@ export class PanoramaViewer {
       }
     });
 
+    // Zoom transition (same-room photo swap)
+    if (this.isZoomTransitioning) {
+      this.zoomProgress += delta / this.zoomDuration;
+      const t = Math.min(this.zoomProgress, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+
+      if (this.zoomPhase === 'out') {
+        this.fov = this.zoomStartFov + (this.zoomPeakFov - this.zoomStartFov) * eased;
+        this.targetFov = this.fov;
+
+        // Slight opacity dip at peak
+        const material = this.sphere.material as THREE.MeshBasicMaterial;
+        material.opacity = 1 - eased * 0.3;
+
+        if (t >= 1) {
+          // At peak zoom-out: swap texture + hotspots
+          this.applyPendingZoomScene();
+          this.zoomPhase = 'in';
+          this.zoomProgress = 0;
+        }
+      } else {
+        this.fov = this.zoomPeakFov + (this.zoomRestoreFov - this.zoomPeakFov) * eased;
+        this.targetFov = this.fov;
+
+        const material = this.sphere.material as THREE.MeshBasicMaterial;
+        material.opacity = 0.7 + eased * 0.3;
+
+        if (t >= 1) {
+          this.isZoomTransitioning = false;
+          this.fov = this.zoomRestoreFov;
+          this.targetFov = this.zoomRestoreFov;
+          const mat = this.sphere.material as THREE.MeshBasicMaterial;
+          mat.opacity = 1;
+          this.zoomResolve?.();
+          this.zoomResolve = null;
+        }
+      }
+    }
+
     // Transition fade (scene load)
     if (this.isTransitioning) {
       this.transitionProgress += delta * 2;
@@ -409,34 +466,30 @@ export class PanoramaViewer {
 
   // Public API
 
-  async loadScene(sceneData: Scene, transition: boolean = true) {
-    if (transition) {
+  async loadScene(sceneData: Scene, transition: boolean | 'zoom' = true) {
+    // Zoom transition: load texture, then animate zoom-out → swap → zoom-in
+    if (transition === 'zoom') {
+      const texture = await this.loadOrGetTexture(sceneData);
+      return new Promise<void>((resolve) => {
+        this.pendingSceneData = sceneData;
+        this.pendingTexture = texture;
+        this.zoomResolve = resolve;
+        this.isZoomTransitioning = true;
+        this.zoomPhase = 'out';
+        this.zoomProgress = 0;
+        this.zoomStartFov = this.fov;
+        this.zoomRestoreFov = sceneData.initialView?.fov || 75;
+      });
+    }
+
+    if (transition === true) {
       this.isTransitioning = true;
       this.transitionProgress = 0;
       const material = this.sphere.material as THREE.MeshBasicMaterial;
       material.opacity = 0;
     }
 
-    // Load texture
-    let texture: THREE.Texture;
-
-    if (this.textureCache.has(sceneData.imageUrl)) {
-      texture = this.textureCache.get(sceneData.imageUrl)!;
-    } else {
-      try {
-        texture = await this.loadTexture(sceneData.imageUrl);
-        this.textureCache.set(sceneData.imageUrl, texture);
-      } catch {
-        // Generate placeholder
-        const placeholderUrl = generatePlaceholderEquirectangular(sceneData.id);
-        if (placeholderUrl) {
-          texture = await this.loadTexture(placeholderUrl);
-        } else {
-          // Fallback solid color
-          texture = new THREE.Texture();
-        }
-      }
-    }
+    const texture = await this.loadOrGetTexture(sceneData);
 
     texture.colorSpace = THREE.SRGBColorSpace;
     const material = this.sphere.material as THREE.MeshBasicMaterial;
@@ -453,6 +506,45 @@ export class PanoramaViewer {
     // Load hotspots
     this.clearHotspots();
     this.createHotspots(sceneData.hotspots);
+  }
+
+  private async loadOrGetTexture(sceneData: Scene): Promise<THREE.Texture> {
+    if (this.textureCache.has(sceneData.imageUrl)) {
+      return this.textureCache.get(sceneData.imageUrl)!;
+    }
+    try {
+      const texture = await this.loadTexture(sceneData.imageUrl);
+      this.textureCache.set(sceneData.imageUrl, texture);
+      return texture;
+    } catch {
+      const placeholderUrl = generatePlaceholderEquirectangular(sceneData.id);
+      if (placeholderUrl) {
+        return await this.loadTexture(placeholderUrl);
+      }
+      return new THREE.Texture();
+    }
+  }
+
+  private applyPendingZoomScene() {
+    if (!this.pendingSceneData || !this.pendingTexture) return;
+
+    this.pendingTexture.colorSpace = THREE.SRGBColorSpace;
+    const material = this.sphere.material as THREE.MeshBasicMaterial;
+    material.map = this.pendingTexture;
+    material.needsUpdate = true;
+
+    // Keep current view direction (no jump) for same-room photos
+    // Only apply initial view if explicitly set
+    if (this.pendingSceneData.initialView) {
+      this.targetLon = this.lon = this.pendingSceneData.initialView.yaw;
+      this.targetLat = this.lat = this.pendingSceneData.initialView.pitch;
+    }
+
+    this.clearHotspots();
+    this.createHotspots(this.pendingSceneData.hotspots);
+
+    this.pendingSceneData = null;
+    this.pendingTexture = null;
   }
 
   private loadTexture(url: string): Promise<THREE.Texture> {
@@ -518,7 +610,7 @@ export class PanoramaViewer {
       const sprite = new THREE.Sprite(spriteMaterial);
       sprite.renderOrder = 999;
       const baseScale = hotspot.scale || 1;
-      const scale = isNav ? 32 * baseScale : 18 * baseScale;
+      const scale = isNav ? 44 * baseScale : 18 * baseScale;
       sprite.scale.set(scale, scale, 1);
       sprite.center.set(0.5, 0.5);
 
@@ -576,10 +668,12 @@ export class PanoramaViewer {
     onHotspotHover?: (hotspot: Hotspot | null) => void;
     onHotspotClick?: (hotspot: Hotspot) => void;
     onViewChange?: (yaw: number, pitch: number, fov: number) => void;
+    shouldDolly?: (hotspot: Hotspot) => boolean;
   }) {
     if (callbacks.onHotspotHover) this.onHotspotHover = callbacks.onHotspotHover;
     if (callbacks.onHotspotClick) this.onHotspotClick = callbacks.onHotspotClick;
     if (callbacks.onViewChange) this.onViewChange = callbacks.onViewChange;
+    if (callbacks.shouldDolly) this.shouldDolly = callbacks.shouldDolly;
   }
 
   getRenderer() {

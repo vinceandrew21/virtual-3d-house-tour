@@ -1,0 +1,147 @@
+{
+  "id": "12312321321312-pvfp",
+  "name": "12312321321312",
+  "description": "awdawdawdawdaw",
+  "defaultScene": "kitchen-1",
+  "scenes": [
+    {
+      "id": "kitchen-1",
+      "name": "kitchen - 1",
+      "floorId": "1st-floor-kgkt",
+      "roomId": "wewewewewew-9gmd",
+      "imageUrl": "/tours/12312321321312-pvfp/kitchen-1.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "kitchen-1-navigation-1llk",
+          "type": "navigation",
+          "position": {
+            "yaw": 80,
+            "pitch": -48
+          },
+          "targetScene": "kitchen-2"
+        },
+        {
+          "id": "kitchen-1-navigation-bv1o",
+          "type": "navigation",
+          "position": {
+            "yaw": -124,
+            "pitch": -32
+          },
+          "targetScene": "bedroom-1"
+        }
+      ]
+    },
+    {
+      "id": "kitchen-2",
+      "name": "kitchen - 2",
+      "floorId": "1st-floor-kgkt",
+      "roomId": "wewewewewew-9gmd",
+      "imageUrl": "/tours/12312321321312-pvfp/kitchen-2.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "kitchen-2-navigation-dssh",
+          "type": "navigation",
+          "position": {
+            "yaw": 180,
+            "pitch": -35
+          },
+          "targetScene": "kitchen-1"
+        }
+      ]
+    },
+    {
+      "id": "bedroom-1",
+      "name": "bedroom - 1",
+      "floorId": "1st-floor-kgkt",
+      "roomId": "bedroom-8x4j",
+      "imageUrl": "/tours/12312321321312-pvfp/bedroom-1.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "bedroom-1-navigation-neqp",
+          "type": "navigation",
+          "position": {
+            "yaw": 152,
+            "pitch": -32
+          },
+          "targetScene": "kitchen-1"
+        },
+        {
+          "id": "bedroom-1-navigation-tai7",
+          "type": "navigation",
+          "position": {
+            "yaw": 46,
+            "pitch": -30
+          },
+          "targetScene": "bedroom-2"
+        }
+      ]
+    },
+    {
+      "id": "bedroom-2",
+      "name": "bedroom - 2",
+      "floorId": "1st-floor-kgkt",
+      "roomId": "bedroom-8x4j",
+      "imageUrl": "/tours/12312321321312-pvfp/bedroom-2.jpg",
+      "initialView": {
+        "yaw": 0,
+        "pitch": 0,
+        "fov": 75
+      },
+      "hotspots": [
+        {
+          "id": "bedroom-2-navigation-2588",
+          "type": "navigation",
+          "position": {
+            "yaw": -159,
+            "pitch": -39
+          },
+          "targetScene": "bedroom-1"
+        },
+        {
+          "id": "bedroom-2-navigation-6trw",
+          "type": "navigation",
+          "position": {
+            "yaw": -30,
+            "pitch": -20
+          },
+          "targetScene": "kitchen-1"
+        }
+      ]
+    }
+  ],
+  "floors": [
+    {
+      "id": "1st-floor-kgkt",
+      "name": "1st floor",
+      "order": 0
+    }
+  ],
+  "rooms": [
+    {
+      "id": "wewewewewew-9gmd",
+      "name": "kitchen",
+      "floorId": "1st-floor-kgkt",
+      "description": ""
+    },
+    {
+      "id": "bedroom-8x4j",
+      "name": "bedroom",
+      "floorId": "1st-floor-kgkt"
+    }
+  ]
+}

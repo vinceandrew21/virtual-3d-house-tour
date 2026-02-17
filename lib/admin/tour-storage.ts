@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { TourConfig, Scene, Hotspot } from '@/types/tour';
+import { TourConfig, Scene, Hotspot, Floor, Room } from '@/types/tour';
 import { TourIndexEntry, ToursIndex } from '@/types/admin';
 
 const TOURS_DIR = path.join(process.cwd(), 'public', 'tours');
@@ -141,12 +141,165 @@ export async function deleteTour(tourId: string): Promise<boolean> {
   }
 }
 
+// ─── Floor CRUD ───
+
+export async function addFloor(
+  tourId: string,
+  name: string
+): Promise<{ tour: TourConfig; floor: Floor } | null> {
+  const tour = await getTour(tourId);
+  if (!tour) return null;
+
+  if (!tour.floors) tour.floors = [];
+
+  const maxOrder = tour.floors.length > 0
+    ? Math.max(...tour.floors.map(f => f.order))
+    : -1;
+
+  const floor: Floor = {
+    id: generateId(name),
+    name,
+    order: maxOrder + 1,
+  };
+
+  tour.floors.push(floor);
+  await saveTour(tour);
+  return { tour, floor };
+}
+
+export async function updateFloor(
+  tourId: string,
+  floorId: string,
+  updates: { name?: string; order?: number }
+): Promise<{ tour: TourConfig; floor: Floor } | null> {
+  const tour = await getTour(tourId);
+  if (!tour) return null;
+
+  const floor = tour.floors?.find(f => f.id === floorId);
+  if (!floor) return null;
+
+  if (updates.name !== undefined) floor.name = updates.name;
+  if (updates.order !== undefined) floor.order = updates.order;
+
+  await saveTour(tour);
+  return { tour, floor };
+}
+
+export async function deleteFloor(
+  tourId: string,
+  floorId: string
+): Promise<TourConfig | null> {
+  const tour = await getTour(tourId);
+  if (!tour) return null;
+
+  tour.floors = (tour.floors || []).filter(f => f.id !== floorId);
+
+  // Get rooms belonging to this floor
+  const roomsToDelete = (tour.rooms || []).filter(r => r.floorId === floorId);
+  const roomIds = roomsToDelete.map(r => r.id);
+  tour.rooms = (tour.rooms || []).filter(r => r.floorId !== floorId);
+
+  // Delete all scenes belonging to rooms on this floor, or directly to this floor
+  const scenesToDelete = tour.scenes.filter(s =>
+    s.floorId === floorId || (s.roomId && roomIds.includes(s.roomId))
+  );
+  for (const scene of scenesToDelete) {
+    const imageDir = path.join(TOURS_DIR, tourId);
+    try {
+      await fs.unlink(path.join(imageDir, `${scene.id}.jpg`));
+    } catch { /* image may not exist */ }
+  }
+  const deleteSceneIds = new Set(scenesToDelete.map(s => s.id));
+  tour.scenes = tour.scenes.filter(s => !deleteSceneIds.has(s.id));
+
+  // Update default scene if needed
+  if (scenesToDelete.some(s => s.id === tour.defaultScene)) {
+    tour.defaultScene = tour.scenes[0]?.id || '';
+  }
+
+  await saveTour(tour);
+  return tour;
+}
+
+// ─── Room CRUD ───
+
+export async function addRoom(
+  tourId: string,
+  name: string,
+  description?: string,
+  floorId?: string
+): Promise<{ tour: TourConfig; room: Room } | null> {
+  const tour = await getTour(tourId);
+  if (!tour) return null;
+
+  if (!tour.rooms) tour.rooms = [];
+
+  const room: Room = {
+    id: generateId(name),
+    name,
+    description: description || undefined,
+    floorId: floorId || undefined,
+  };
+
+  tour.rooms.push(room);
+  await saveTour(tour);
+  return { tour, room };
+}
+
+export async function updateRoom(
+  tourId: string,
+  roomId: string,
+  updates: { name?: string; description?: string }
+): Promise<{ tour: TourConfig; room: Room } | null> {
+  const tour = await getTour(tourId);
+  if (!tour) return null;
+
+  const room = tour.rooms?.find(r => r.id === roomId);
+  if (!room) return null;
+
+  if (updates.name !== undefined) room.name = updates.name;
+  if (updates.description !== undefined) room.description = updates.description;
+
+  await saveTour(tour);
+  return { tour, room };
+}
+
+export async function deleteRoom(
+  tourId: string,
+  roomId: string
+): Promise<TourConfig | null> {
+  const tour = await getTour(tourId);
+  if (!tour) return null;
+
+  tour.rooms = (tour.rooms || []).filter(r => r.id !== roomId);
+
+  // Delete all scenes (photos) belonging to this room
+  const scenesToDelete = tour.scenes.filter(s => s.roomId === roomId);
+  for (const scene of scenesToDelete) {
+    const imageDir = path.join(TOURS_DIR, tourId);
+    try {
+      await fs.unlink(path.join(imageDir, `${scene.id}.jpg`));
+    } catch { /* image may not exist */ }
+  }
+  tour.scenes = tour.scenes.filter(s => s.roomId !== roomId);
+
+  // Update default scene if needed
+  if (scenesToDelete.some(s => s.id === tour.defaultScene)) {
+    tour.defaultScene = tour.scenes[0]?.id || '';
+  }
+
+  await saveTour(tour);
+  return tour;
+}
+
 // ─── Scene CRUD ───
 
 export async function addScene(
   tourId: string,
   name: string,
-  description?: string
+  description?: string,
+  floorId?: string,
+  roomId?: string
 ): Promise<{ tour: TourConfig; scene: Scene } | null> {
   const tour = await getTour(tourId);
   if (!tour) return null;
@@ -157,6 +310,8 @@ export async function addScene(
     id: sceneId,
     name,
     description: description || undefined,
+    floorId: floorId || undefined,
+    roomId: roomId || undefined,
     imageUrl: '',
     initialView: { yaw: 0, pitch: 0, fov: 75 },
     hotspots: [],
@@ -219,7 +374,9 @@ export async function addMultipleScenes(
   tourId: string,
   baseName: string,
   description: string | undefined,
-  imageFiles: File[]
+  imageFiles: File[],
+  floorId?: string,
+  roomId?: string
 ): Promise<{ tour: TourConfig; scenes: Scene[] } | null> {
   const tour = await getTour(tourId);
   if (!tour) return null;
@@ -242,6 +399,8 @@ export async function addMultipleScenes(
       id: sceneId,
       name: sceneName,
       description: description || undefined,
+      floorId: floorId || undefined,
+      roomId: roomId || undefined,
       imageUrl: '',
       initialView: { yaw: 0, pitch: 0, fov: 75 },
       hotspots: [],

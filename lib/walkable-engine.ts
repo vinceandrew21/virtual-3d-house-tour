@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Scene, Hotspot, WalkableConfig, FurnitureItem, LightConfig } from '@/types/tour';
 import { drawNavigationFloorRing, drawHotspotIcon } from './hotspot-sprites';
+import { getRoomTexture, getFurnitureTexture } from './generate-room-textures';
 
 export interface WalkableHotspotMesh {
   mesh: THREE.Group;
@@ -510,12 +511,18 @@ export class WalkableViewer {
 
     // Floor
     const floorGeo = new THREE.PlaneGeometry(w, d);
-    const floorMat = new THREE.MeshStandardMaterial({
+    const floorMatProps: THREE.MeshStandardMaterialParameters = {
       color: floorColor,
       roughness: 0.85,
       metalness: 0.05,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    };
+    if (config.floorTexture) {
+      const tex = getRoomTexture(config.floorTexture, floorColor);
+      tex.repeat.set(w / 4, d / 4);
+      floorMatProps.map = tex;
+      floorMatProps.color = '#ffffff';
+    }
+    const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial(floorMatProps));
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
@@ -523,46 +530,61 @@ export class WalkableViewer {
 
     // Ceiling
     const ceilGeo = new THREE.PlaneGeometry(w, d);
-    const ceilMat = new THREE.MeshStandardMaterial({
+    const ceilMatProps: THREE.MeshStandardMaterialParameters = {
       color: ceilingColor,
       roughness: 0.9,
       metalness: 0,
-    });
-    const ceil = new THREE.Mesh(ceilGeo, ceilMat);
+    };
+    if (config.ceilingTexture) {
+      const tex = getRoomTexture(config.ceilingTexture, ceilingColor);
+      tex.repeat.set(w / 4, d / 4);
+      ceilMatProps.map = tex;
+      ceilMatProps.color = '#ffffff';
+    }
+    const ceil = new THREE.Mesh(ceilGeo, new THREE.MeshStandardMaterial(ceilMatProps));
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = h;
     this.scene.add(ceil);
     this.roomMeshes.push(ceil);
 
     // Walls
-    const wallMat = new THREE.MeshStandardMaterial({
-      color: wallColor,
-      roughness: 0.7,
-      metalness: 0.02,
-    });
+    const makeWallMat = (wallWidth: number, wallHeight: number) => {
+      const props: THREE.MeshStandardMaterialParameters = {
+        color: wallColor,
+        roughness: 0.7,
+        metalness: 0.02,
+      };
+      if (config.wallTexture) {
+        const tex = getRoomTexture(config.wallTexture, wallColor);
+        tex.repeat.set(wallWidth / 4, wallHeight / 4);
+        props.map = tex;
+        props.color = '#ffffff';
+      }
+      return new THREE.MeshStandardMaterial(props);
+    };
 
     // Front wall (-Z)
-    const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
+    const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), makeWallMat(w, h));
     frontWall.position.set(0, h / 2, -d / 2);
     this.scene.add(frontWall);
     this.roomMeshes.push(frontWall);
 
     // Back wall (+Z)
-    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat.clone());
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), makeWallMat(w, h));
     backWall.position.set(0, h / 2, d / 2);
     backWall.rotation.y = Math.PI;
     this.scene.add(backWall);
     this.roomMeshes.push(backWall);
 
     // Left wall (-X)
-    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat.clone());
+    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), makeWallMat(d, h));
     leftWall.position.set(-w / 2, h / 2, 0);
     leftWall.rotation.y = Math.PI / 2;
     this.scene.add(leftWall);
     this.roomMeshes.push(leftWall);
 
     // Right wall (+X)
-    const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat.clone());
+    const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), makeWallMat(d, h));
     rightWall.position.set(w / 2, h / 2, 0);
     rightWall.rotation.y = -Math.PI / 2;
     this.scene.add(rightWall);
@@ -588,13 +610,31 @@ export class WalkableViewer {
         geometry = new THREE.BoxGeometry(item.scale.x, item.scale.y, item.scale.z);
     }
 
-    const material = new THREE.MeshStandardMaterial({
+    const matProps: THREE.MeshStandardMaterialParameters = {
       color: item.color,
       emissive: item.emissive || '#000000',
       emissiveIntensity: item.emissive ? 0.3 : 0,
       roughness: 0.6,
       metalness: 0.1,
-    });
+    };
+    if (item.texture) {
+      const tex = getFurnitureTexture(item.texture, item.color);
+      tex.repeat.set(1, 1);
+      matProps.map = tex;
+      matProps.color = '#ffffff';
+      if (item.texture === 'metal') {
+        matProps.metalness = 0.6;
+        matProps.roughness = 0.3;
+      } else if (item.texture === 'glass') {
+        matProps.metalness = 0.1;
+        matProps.roughness = 0.05;
+        matProps.transparent = true;
+        matProps.opacity = 0.4;
+      } else if (item.texture === 'leather') {
+        matProps.roughness = 0.5;
+      }
+    }
+    const material = new THREE.MeshStandardMaterial(matProps);
 
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(item.position.x, item.position.y, item.position.z);
@@ -707,7 +747,7 @@ export class WalkableViewer {
       const sprite = new THREE.Sprite(spriteMaterial);
       sprite.renderOrder = 999;
       const baseScale = hotspot.scale || 1;
-      const scale = isNav ? 0.5 * baseScale : 0.35 * baseScale;
+      const scale = isNav ? 0.7 * baseScale : 0.35 * baseScale;
       sprite.scale.set(scale, scale, 1);
 
       group.add(sprite);
@@ -718,8 +758,8 @@ export class WalkableViewer {
 
   // Public API
 
-  async loadScene(sceneData: Scene, transition: boolean = true) {
-    if (transition) {
+  async loadScene(sceneData: Scene, transition: boolean | 'zoom' = true) {
+    if (transition === true) {
       this.isTransitioning = true;
       this.transitionProgress = 0;
       if (this.fadeOverlay) {

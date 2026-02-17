@@ -6,6 +6,7 @@ interface HotspotTooltipProps {
   hotspot: Hotspot;
   x: number;
   y: number;
+  resolvedLabel?: string;
 }
 
 const typeLabels: Record<string, string> = {
@@ -24,7 +25,7 @@ const typeIcons: Record<string, string> = {
   link: '↗',
 };
 
-export default function HotspotTooltip({ hotspot, x, y }: HotspotTooltipProps) {
+export default function HotspotTooltip({ hotspot, x, y, resolvedLabel }: HotspotTooltipProps) {
   return (
     <div
       className="hotspot-tooltip"
@@ -37,7 +38,7 @@ export default function HotspotTooltip({ hotspot, x, y }: HotspotTooltipProps) {
     >
       <span className="hotspot-tooltip-icon">{typeIcons[hotspot.type] || 'ℹ'}</span>
       <div className="hotspot-tooltip-text">
-        <span className="hotspot-tooltip-label">{hotspot.tooltip || typeLabels[hotspot.type]}</span>
+        <span className="hotspot-tooltip-label">{resolvedLabel || hotspot.tooltip || typeLabels[hotspot.type]}</span>
         <span className="hotspot-tooltip-type">{typeLabels[hotspot.type]}</span>
       </div>
     </div>

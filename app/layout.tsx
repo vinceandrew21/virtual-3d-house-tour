@@ -9,13 +9,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Virtual 3D House Tour | Immersive 360° Experience",
+  title: "Virtual Tours Studio | Real Estate Photography & 3D Virtual Tours",
   description:
-    "Explore beautiful living spaces in stunning 360° panoramic virtual tours. Navigate between rooms with interactive hotspots, view details, and immerse yourself in modern interior design.",
-  keywords: ["virtual tour", "360 panorama", "3D house tour", "interior design", "WebGL"],
+    "Professional real estate photography, photo editing, 360-degree photos, and immersive 3D virtual tours. Elevating property marketing through visual excellence.",
+  keywords: [
+    "real estate photography",
+    "photo editing",
+    "360 photos",
+    "3D virtual tours",
+    "property marketing",
+    "virtual tour",
+  ],
   openGraph: {
-    title: "Virtual 3D House Tour",
-    description: "Immersive 360° virtual house tour experience",
+    title: "Virtual Tours Studio",
+    description: "Professional real estate photography & 3D virtual tours",
     type: "website",
   },
 };
@@ -23,9 +30,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#000000",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({

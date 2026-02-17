@@ -1,50 +1,62 @@
 export function drawNavigationFloorRing(ctx: CanvasRenderingContext2D) {
   const cx = 128, cy = 128;
 
-  // Outer glow — large soft halo
-  const glowGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 120);
-  glowGrad.addColorStop(0, 'rgba(255,255,255,0.45)');
-  glowGrad.addColorStop(0.35, 'rgba(255,255,255,0.15)');
-  glowGrad.addColorStop(0.7, 'rgba(255,255,255,0.05)');
-  glowGrad.addColorStop(1, 'transparent');
-  ctx.fillStyle = glowGrad;
+  // Large soft outer glow
+  const outerGlow = ctx.createRadialGradient(cx, cy, 40, cx, cy, 125);
+  outerGlow.addColorStop(0, 'rgba(255,255,255,0.25)');
+  outerGlow.addColorStop(0.5, 'rgba(255,255,255,0.08)');
+  outerGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = outerGlow;
   ctx.beginPath();
-  ctx.arc(cx, cy, 120, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 125, 0, Math.PI * 2);
   ctx.fill();
 
-  // Translucent filled disc
-  const discGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
-  discGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
-  discGrad.addColorStop(1, 'rgba(255,255,255,0.12)');
-  ctx.fillStyle = discGrad;
+  // Main ring — thick bright white ring (donut shape)
   ctx.beginPath();
-  ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 55, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 40, 0, Math.PI * 2, true); // counter-clockwise to cut out center
+  ctx.closePath();
+  const ringGrad = ctx.createRadialGradient(cx, cy, 40, cx, cy, 55);
+  ringGrad.addColorStop(0, 'rgba(255,255,255,0.95)');
+  ringGrad.addColorStop(0.5, 'rgba(255,255,255,0.85)');
+  ringGrad.addColorStop(1, 'rgba(220,220,220,0.7)');
+  ctx.fillStyle = ringGrad;
   ctx.fill();
 
-  // Outer ring border
-  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-  ctx.lineWidth = 3.5;
+  // Inner glow inside the ring
+  const innerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 38);
+  innerGlow.addColorStop(0, 'rgba(255,255,255,0.3)');
+  innerGlow.addColorStop(0.6, 'rgba(255,255,255,0.1)');
+  innerGlow.addColorStop(1, 'rgba(255,255,255,0.05)');
+  ctx.fillStyle = innerGlow;
   ctx.beginPath();
-  ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Outer edge highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 56, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Inner ring
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.lineWidth = 2;
+  // Inner edge highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 39, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Center chevron (downward arrow — "walk here")
-  ctx.fillStyle = '#ffffff';
+  // Center chevron arrow pointing up — "go here"
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.beginPath();
-  ctx.moveTo(cx, cy + 12);
-  ctx.lineTo(cx - 10, cy - 4);
-  ctx.lineTo(cx - 4, cy - 4);
-  ctx.lineTo(cx - 4, cy - 14);
-  ctx.lineTo(cx + 4, cy - 14);
-  ctx.lineTo(cx + 4, cy - 4);
-  ctx.lineTo(cx + 10, cy - 4);
+  ctx.moveTo(cx, cy - 14);       // tip
+  ctx.lineTo(cx + 12, cy + 4);   // bottom-right
+  ctx.lineTo(cx + 4, cy + 4);
+  ctx.lineTo(cx + 4, cy + 12);
+  ctx.lineTo(cx - 4, cy + 12);
+  ctx.lineTo(cx - 4, cy + 4);
+  ctx.lineTo(cx - 12, cy + 4);   // bottom-left
   ctx.closePath();
   ctx.fill();
 }

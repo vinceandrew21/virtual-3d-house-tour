@@ -1,3 +1,16 @@
+export interface Floor {
+  id: string;
+  name: string;
+  order: number;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  description?: string;
+  floorId?: string;
+}
+
 export interface TourConfig {
   id: string;
   name: string;
@@ -5,6 +18,8 @@ export interface TourConfig {
   author?: string;
   thumbnail?: string;
   defaultScene: string;
+  floors?: Floor[];
+  rooms?: Room[];
   scenes: Scene[];
 }
 
@@ -14,6 +29,8 @@ export interface Scene {
   id: string;
   name: string;
   description?: string;
+  floorId?: string;
+  roomId?: string;
   mode?: SceneMode;
   imageUrl: string;
   thumbnail?: string;
@@ -26,6 +43,9 @@ export interface Scene {
   hotspots: Hotspot[];
 }
 
+export type RoomTexture = 'wood' | 'concrete' | 'plaster' | 'tile' | 'carpet';
+export type FurnitureTexture = 'wood' | 'fabric' | 'metal' | 'leather' | 'glass';
+
 export interface WalkableConfig {
   roomWidth: number;
   roomDepth: number;
@@ -33,6 +53,9 @@ export interface WalkableConfig {
   wallColor: string;
   floorColor: string;
   ceilingColor: string;
+  floorTexture?: RoomTexture;
+  wallTexture?: RoomTexture;
+  ceilingTexture?: RoomTexture;
   spawnPosition: { x: number; y: number; z: number };
   spawnLookAt: { x: number; y: number; z: number };
   furniture: FurnitureItem[];
@@ -47,6 +70,7 @@ export interface FurnitureItem {
   scale: { x: number; y: number; z: number };
   color: string;
   emissive?: string;
+  texture?: FurnitureTexture;
   label?: string;
   collision?: boolean;
 }

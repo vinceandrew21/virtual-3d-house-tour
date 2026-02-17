@@ -28,6 +28,8 @@ export async function POST(
 
     const name = formData.get('name') as string;
     const description = formData.get('description') as string | null;
+    const floorId = formData.get('floorId') as string | null;
+    const roomId = formData.get('roomId') as string | null;
 
     if (!name) {
       return NextResponse.json(
@@ -53,7 +55,7 @@ export async function POST(
 
     // Single photo — same behavior as before
     if (files.length === 1) {
-      const result = await addScene(tourId, name, description || undefined);
+      const result = await addScene(tourId, name, description || undefined, floorId || undefined, roomId || undefined);
       if (!result) {
         return NextResponse.json(
           { success: false, error: 'Tour not found' },
@@ -71,7 +73,7 @@ export async function POST(
     }
 
     // Multiple photos — create linked scenes with auto-hotspots
-    const result = await addMultipleScenes(tourId, name, description || undefined, files);
+    const result = await addMultipleScenes(tourId, name, description || undefined, files, floorId || undefined, roomId || undefined);
     if (!result) {
       return NextResponse.json(
         { success: false, error: 'Tour not found' },

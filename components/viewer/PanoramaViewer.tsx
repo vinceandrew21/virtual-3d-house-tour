@@ -22,6 +22,7 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<AnyViewer | null>(null);
   const currentModeRef = useRef<SceneMode>('panorama');
+  const currentSceneRef = useRef<Scene | null>(null);
   const [currentScene, setCurrentScene] = useState<Scene | null>(null);
   const [hoveredHotspot, setHoveredHotspot] = useState<Hotspot | null>(null);
   const [activeHotspot, setActiveHotspot] = useState<Hotspot | null>(null);
@@ -44,6 +45,21 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
     };
 
     viewer.setCallbacks(callbacks);
+
+    // For panorama viewer: skip dolly for same-room navigation
+    if (viewer instanceof ViewerEngine) {
+      viewer.setCallbacks({
+        ...callbacks,
+        shouldDolly: (hotspot) => {
+          if (hotspot.type !== 'navigation' || !hotspot.targetScene) return true;
+          const targetScene = tour.scenes.find(s => s.id === hotspot.targetScene);
+          if (!targetScene) return true;
+          // Use ref to get latest currentScene without dependency
+          const current = currentSceneRef.current;
+          return !(current?.roomId && targetScene.roomId === current.roomId);
+        },
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,6 +76,12 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
   }, []);
 
   // Initialize viewer
+  // Lock scrolling on viewer pages
+  useEffect(() => {
+    document.documentElement.classList.add('viewer-page');
+    return () => document.documentElement.classList.remove('viewer-page');
+  }, []);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -79,7 +101,7 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadScene = useCallback(async (scene: Scene, transition: boolean = true) => {
+  const loadScene = useCallback(async (scene: Scene, transition: boolean | 'zoom' = true) => {
     if (!containerRef.current) return;
 
     const targetMode: SceneMode = scene.mode || 'panorama';
@@ -93,8 +115,11 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
       setupCallbacks(newViewer);
     }
 
-    setIsLoading(true);
+    if (transition === true) {
+      setIsLoading(true);
+    }
     setCurrentScene(scene);
+    currentSceneRef.current = scene;
     setActiveHotspot(null);
     setHoveredHotspot(null);
 
@@ -112,7 +137,11 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
         });
     }
 
-    setTimeout(() => setIsLoading(false), 500);
+    if (transition === true) {
+      setTimeout(() => setIsLoading(false), 500);
+    } else {
+      setIsLoading(false);
+    }
   }, [tour.scenes, createEngine, setupCallbacks]);
 
   const handleHotspotClick = useCallback((hotspot: Hotspot) => {
@@ -120,7 +149,10 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
       case 'navigation': {
         const targetScene = tour.scenes.find(s => s.id === hotspot.targetScene);
         if (targetScene) {
-          loadScene(targetScene, true);
+          // Same room = zoom transition, different room = fade transition
+          const current = currentSceneRef.current;
+          const sameRoom = !!(current?.roomId && targetScene.roomId === current.roomId);
+          loadScene(targetScene, sameRoom ? 'zoom' : true);
         }
         break;
       }
@@ -222,10 +254,12 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
       {/* Scene selector */}
       <SceneSelector
         scenes={tour.scenes}
+        rooms={tour.rooms}
+        floors={tour.floors}
         currentSceneId={currentScene?.id || ''}
-        onSelectScene={(sceneId) => {
+        onSelectScene={(sceneId, sameRoom) => {
           const scene = tour.scenes.find(s => s.id === sceneId);
-          if (scene) loadScene(scene, true);
+          if (scene) loadScene(scene, sameRoom ? 'zoom' : true);
         }}
         visible={showUI}
       />
@@ -243,6 +277,15 @@ export default function PanoramaViewerComponent({ tour }: PanoramaViewerProps) {
           hotspot={hoveredHotspot}
           x={mousePos.x}
           y={mousePos.y}
+          resolvedLabel={(() => {
+            if (hoveredHotspot.type !== 'navigation' || !hoveredHotspot.targetScene) return undefined;
+            const targetScene = tour.scenes.find(s => s.id === hoveredHotspot.targetScene);
+            if (!targetScene?.roomId) return undefined;
+            const sameRoom = currentScene?.roomId && targetScene.roomId === currentScene.roomId;
+            if (sameRoom) return undefined;
+            const targetRoom = tour.rooms?.find(r => r.id === targetScene.roomId);
+            return targetRoom?.name;
+          })()}
         />
       )}
 
