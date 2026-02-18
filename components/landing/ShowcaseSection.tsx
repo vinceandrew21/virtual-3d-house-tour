@@ -72,7 +72,7 @@ export default function ShowcaseSection() {
             scrollTrigger: {
               trigger: item,
               start: 'top 85%',
-              toggleActions: 'play none none none',
+              toggleActions: 'play reverse play reverse',
             },
             delay: (i % 2) * 0.15, // Stagger left vs right column
           }

@@ -1,3 +1,4 @@
+import ThemeProvider from '@/components/landing/ThemeProvider';
 import LoadingIntro from '@/components/landing/LoadingIntro';
 import LandingHeader from '@/components/landing/LandingHeader';
 import HeroSection from '@/components/landing/HeroSection';
@@ -10,18 +11,20 @@ import LandingFooter from '@/components/landing/LandingFooter';
 
 export default function HomePage() {
   return (
-    <div className="landing-page">
-      <LoadingIntro />
-      <LandingHeader />
-      <main>
-        <HeroSection />
-        <HeroImage />
-        <ServicesSection />
-        <ShowcaseSection />
-        <AboutSection />
-        <CTASection />
-      </main>
-      <LandingFooter />
-    </div>
+    <ThemeProvider>
+      <div className="landing-page">
+        <LoadingIntro />
+        <LandingHeader />
+        <main>
+          <HeroSection />
+          <HeroImage />
+          <ServicesSection />
+          <ShowcaseSection />
+          <AboutSection />
+          <CTASection />
+        </main>
+        <LandingFooter />
+      </div>
+    </ThemeProvider>
   );
 }

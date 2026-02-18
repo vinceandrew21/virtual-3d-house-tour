@@ -17,8 +17,14 @@ export default function LoadingIntro() {
     const counterEl = counterRef.current;
     const overlay = overlayRef.current;
 
+    // Disable scroll during loading
+    document.body.style.overflow = 'hidden';
+
     const tl = gsap.timeline({
-      onComplete: () => setDone(true),
+      onComplete: () => {
+        document.body.style.overflow = '';
+        setDone(true);
+      },
     });
 
     // Phase 1: Brand name letters stagger in from below
@@ -75,7 +81,10 @@ export default function LoadingIntro() {
       ease: 'power3.inOut',
     }, '-=0.1');
 
-    return () => { tl.kill(); };
+    return () => {
+      document.body.style.overflow = '';
+      tl.kill();
+    };
   }, []);
 
   if (done) return null;

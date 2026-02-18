@@ -19,7 +19,7 @@ export default function CTASection() {
         scrollTrigger: {
           trigger: '.landing-cta-inner',
           start: 'top 85%',
-          toggleActions: 'play none none none',
+          toggleActions: 'play none play reverse',
         },
         y: 40,
         opacity: 0,

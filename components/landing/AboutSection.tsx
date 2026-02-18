@@ -18,7 +18,7 @@ export default function AboutSection() {
         scrollTrigger: {
           trigger: '.landing-about-content',
           start: 'top 80%',
-          toggleActions: 'play none none none',
+          toggleActions: 'play none play reverse',
         },
         y: 50,
         opacity: 0,
