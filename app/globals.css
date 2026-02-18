@@ -896,7 +896,7 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  font-size: clamp(3.5rem, 10vw, 9rem);
+  font-size: clamp(2rem, 8vw, 9rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
